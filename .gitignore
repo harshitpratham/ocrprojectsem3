@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+.env
+.venv
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Intermediate training checkpoints (keep only final models in models/)
+checkpoints/
+
+# Raw optimizer/RNG states (not needed for inference)
+optimizer.pt
+rng_state.pth
+
+# Preprocessed tensor cache (regenerate with preprocess_images.py)
+*.pth
+
+# Preprocessed tensors (regenerate with preprocess_images.py)
+preprocessed/
+
+# Dataset images (download from IIIT-HW or Roboflow)
+dataset/HindiSeg/
+# Only ignore repo-root convenience dirs, not data/**/sorted_crops
+/sorted_crops/
+/handwritten-yolo/
+
+# YOLO runs output (repo root only; nested e.g. data/yolo_training_dataset/runs/ may be tracked)
+/runs/
+
+# Training logs
+training_log.out
+nohup.out
+nohup._*out
+*.log
+
+# Annotation tool generated files
+annotations/history.csv
+annotations/history.json
+annotations/users.json
+
+# AWS key
+*.pem
+
+# Local Drive export zip (dataset lives under data/yolo_training_dataset/)
+drive-download-*.zip
+
+# Virtual environments anywhere in tree
+data/data-annotation/
+
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# TrOCR weights: tracked via Git LFS (see .gitattributes)

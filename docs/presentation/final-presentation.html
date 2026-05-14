@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hindi OCR — Final Project | Group 39 | ISY5004</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --surface: #f8f9fb;
+    --surface2: #eef0f5;
+    --border: #dde1ea;
+    --text: #1a1a2e;
+    --text-dim: #5c5c78;
+    --accent: #d97706;
+    --accent2: #b45309;
+    --blue: #2563eb;
+    --green: #16a34a;
+    --red: #dc2626;
+    --purple: #7c3aed;
+    --cyan: #0891b2;
+    --pink: #db2777;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  i[data-lucide] { display: inline-flex; width: 1.2em; height: 1.2em; vertical-align: -0.15em; }
+  .icon-lg i[data-lucide] { width: 1.8rem; height: 1.8rem; }
+  .icon-xl i[data-lucide] { width: 2.2rem; height: 2.2rem; display: block; margin-bottom: 0.5rem; }
+
+  .sample-crop {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; text-align: center; padding: 0.3rem;
+  }
+  .sample-crop img { max-height: 60px; width: auto; display: block; margin: 0 auto; image-rendering: auto; }
+  .sample-crop .crop-label { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.2rem; }
+  .sample-crop .crop-gt { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+  .sample-crop .crop-pred { font-size: 0.75rem; }
+  .pred-correct { color: var(--green); }
+  .pred-wrong { color: var(--red); }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+    padding: 0.6rem 2rem; display: flex; align-items: center; gap: 1rem;
+  }
+  nav .logo { font-family: 'Playfair Display', serif; font-weight: 900; color: var(--accent); font-size: 1.1rem; white-space: nowrap; }
+  nav .slides-nav { display: flex; gap: 0.3rem; overflow-x: auto; flex: 1; padding: 0.2rem 0; }
+  nav .slides-nav a {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px; font-size: 0.7rem; font-weight: 600;
+    color: var(--text-dim); text-decoration: none; border: 1px solid transparent; transition: all 0.2s; flex-shrink: 0;
+  }
+  nav .slides-nav a:hover, nav .slides-nav a.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  .slide {
+    min-height: 100vh; padding: 5rem 2rem 3rem;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; border-bottom: 1px solid var(--border);
+  }
+  .slide:nth-child(even) { background: #f8f9fb; }
+  .slide-inner { max-width: 1100px; margin: 0 auto; width: 100%; }
+  .slide-number { position: absolute; top: 5rem; right: 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; }
+  .slide-title { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 900; margin-bottom: 1.8rem; line-height: 1.2; color: #1a1a2e; padding-bottom: 0.5rem; display: inline-block; }
+  .slide-title span { color: var(--accent); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .card-accent { border-left: 4px solid var(--accent); }
+  .card-blue { border-left: 4px solid var(--blue); }
+  .card-green { border-left: 4px solid var(--green); }
+  .card-red { border-left: 4px solid var(--red); }
+  .card-purple { border-left: 4px solid var(--purple); }
+  .card-cyan { border-left: 4px solid var(--cyan); }
+  .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+  .card p, .card li { font-size: 0.88rem; color: var(--text-dim); line-height: 1.7; }
+  .card ul { padding-left: 1.2rem; }
+  .card li { margin-bottom: 0.3rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 1.5rem 0; flex-wrap: wrap; justify-content: center; }
+  .flow-step { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem; text-align: center; min-width: 140px; flex: 1; }
+  .flow-step .step-icon { margin-bottom: 0.4rem; color: var(--text-dim); }
+  .flow-step .step-label { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.3rem; }
+  .flow-step .step-detail { font-size: 0.75rem; color: var(--text-dim); }
+  .flow-arrow { display: flex; align-items: center; font-size: 1.4rem; color: var(--accent); padding: 0 0.4rem; flex-shrink: 0; }
+
+  .stat-row { display: flex; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.5rem; text-align: center; flex: 1; min-width: 130px; }
+  .stat-box .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+  .stat-box .stat-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem; }
+  .stat-box .stat-sub { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.15rem; font-style: italic; }
+
+  .badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; margin: 0.15rem; }
+  .badge-amber { background: rgba(217,119,6,0.12); color: var(--accent); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-blue { background: rgba(37,99,235,0.10); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+  .badge-green { background: rgba(22,163,74,0.10); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .badge-red { background: rgba(220,38,38,0.10); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .badge-purple { background: rgba(124,58,237,0.10); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 0.7rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+  th { font-weight: 700; color: var(--accent); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { color: var(--text-dim); }
+
+  .chart-container { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin: 1rem 0; }
+  svg text { font-family: 'DM Sans', sans-serif; }
+
+  .timeline { position: relative; padding-left: 2rem; }
+  .timeline::before { content: ''; position: absolute; left: 0.5rem; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .timeline-item { position: relative; margin-bottom: 1.2rem; padding-left: 1.5rem; }
+  .timeline-item::before { content: ''; position: absolute; left: -1.55rem; top: 0.5rem; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent); background: var(--bg); }
+  .timeline-item.done::before { background: var(--green); border-color: var(--green); }
+  .timeline-item.active::before { background: var(--accent); border-color: var(--accent); }
+  .timeline-item.pending::before { background: var(--surface); border-color: var(--text-dim); }
+  .timeline-item h4 { font-size: 0.9rem; font-weight: 700; }
+  .timeline-item p { font-size: 0.8rem; color: var(--text-dim); }
+
+  .title-slide { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 100vh; background: radial-gradient(ellipse at 50% 30%, rgba(217,119,6,0.06) 0%, transparent 60%); }
+  .title-slide h1 { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; line-height: 1.15; max-width: 800px; margin-bottom: 1rem; }
+  .title-slide h1 span { color: var(--accent); }
+  .title-slide .subtitle { font-size: 1.1rem; color: var(--accent); font-weight: 500; margin-bottom: 2rem; }
+  .team-chips { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; }
+  .team-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 0.5rem 1.2rem; font-size: 0.85rem; }
+  .team-chip strong { color: var(--text); }
+  .team-chip span { color: var(--text-dim); font-size: 0.75rem; }
+  .devanagari-bg { position: absolute; font-size: 12rem; color: rgba(217,119,6,0.07); font-weight: 900; pointer-events: none; user-select: none; }
+
+  .bar-chart { margin: 1rem 0; }
+  .bar-row { display: grid; grid-template-columns: 170px minmax(160px, 1fr) 72px; align-items: center; gap: 0.8rem; margin-bottom: 0.6rem; }
+  .bar-label { font-size: 0.78rem; text-align: right; color: #111827; }
+  .bar-track { height: 28px; background: var(--surface2); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.6rem; font-size: 0.75rem; font-weight: 700; color: #ffffff; min-width: 32px; }
+  .bar-fill-green { background: #16a34a; }
+  .bar-fill-blue { background: #2563eb; }
+  .bar-fill-amber { background: #d97706; }
+  .bar-fill-red { background: #dc2626; }
+  .bar-fill-purple { background: #7c3aed; }
+  .bar-value { font-size: 0.78rem; font-weight: 700; text-align: right; color: #0f172a; }
+
+  .highlight { color: var(--accent); font-weight: 700; }
+  code { background: var(--surface2); padding: 0.1rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.88em; color: var(--text); }
+
+  /* Mermaid diagram sizing */
+  .mermaid { max-width: 900px; margin: 1rem auto; }
+  .mermaid svg { max-width: 100%; height: auto; }
+
+  @media print {
+    body { padding: 0; }
+    nav { display: none !important; }
+    .slide {
+      min-height: 0 !important; height: auto !important; max-height: 100vh;
+      overflow: hidden !important; break-after: page; break-inside: avoid;
+      page-break-after: always; page-break-inside: avoid;
+      padding: 2rem 2rem 1.5rem !important; border-bottom: none;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+  }
+  @media (max-width: 768px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .flow { flex-direction: column; align-items: center; }
+    .flow-arrow { transform: rotate(90deg); }
+    .title-slide h1 { font-size: 2rem; }
+    .slide-title { font-size: 1.6rem; }
+    .bar-row { grid-template-columns: 120px 1fr 60px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Hindi OCR</div>
+  <div class="slides-nav">
+    <a href="#s1">1</a><a href="#s2">2</a><a href="#s3">3</a><a href="#s4">4</a><a href="#s5">5</a>
+    <a href="#s6">6</a><a href="#s7">7</a><a href="#s8">8</a><a href="#s9">9</a><a href="#s10">10</a>
+    <a href="#s11">11</a><a href="#s12">12</a><a href="#s13">13</a><a href="#s14">14</a><a href="#s15">15</a>
+    <a href="#s16">16</a><a href="#s17">17</a><a href="#s18">18</a><a href="#s19">19</a><a href="#s20">20</a>
+    <a href="#s21">21</a><a href="#s22">22</a><a href="#s23">23</a><a href="#s24">24</a><a href="#s25">25</a>
+  </div>
+</nav>
+
+<!-- ===== SLIDE 1: TITLE ===== -->
+<section class="slide title-slide" id="s1">
+  <div class="devanagari-bg" style="top:8%;left:-4%;">हिं</div>
+  <div class="devanagari-bg" style="bottom:4%;right:-4%;">दी</div>
+  <div style="position:relative;z-index:1;">
+    <p style="font-size:0.8rem;color:var(--text-dim);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:1rem;">ISY5004 · Intelligent Sensing Systems · NUS ISS · Jan–May 2026</p>
+    <h1>Hindi Handwritten Document <span>Recognition</span> via Visual Sensing</h1>
+    <p class="subtitle">Final Project Presentation — Group 39</p>
+    <div class="team-chips">
+      <div class="team-chip"><strong>Harshit AGARWAL</strong> <span>E1509813</span></div>
+      <div class="team-chip"><strong>Chitrarath BHATTACHARJEE</strong> <span>E1511452</span></div>
+      <div class="team-chip"><strong>Jia Hui GAN</strong> <span>E1092587</span></div>
+    </div>
+    <p style="margin-top:2rem;font-size:0.82rem;color:var(--text-dim);">Client: Pratham Education Foundation &nbsp;·&nbsp; End-to-end OCR pipeline for ASER field surveys</p>
+  </div>
+</section>
+
+<!-- ===== SLIDE 2: EXECUTIVE SUMMARY ===== -->
+<section class="slide" id="s2">
+  <div class="slide-inner">
+    <div class="slide-number">02 / 25</div>
+    <div class="slide-title">Executive <span>Summary</span></div>
+    <div class="stat-row">
+      <div class="stat-box" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.25);">
+        <div class="stat-value" style="color:var(--green);">−12.9%</div>
+        <div class="stat-label">Relative CER reduction — recognition</div>
+        <div class="stat-sub">HindiSeg test: 8.17% → 7.12%</div>
+      </div>
+      <div class="stat-box" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.25);">
+        <div class="stat-value" style="color:var(--green);">−29.7%</div>
+        <div class="stat-label">Relative CER reduction — full pipeline</div>
+        <div class="stat-sub">Eval pages 31–41: 51.8% → 36.4%</div>
+      </div>
+      <div class="stat-box" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.25);">
+        <div class="stat-value" style="color:var(--green);">−27pp</div>
+        <div class="stat-label">Absolute CER drop — Pratham field</div>
+        <div class="stat-sub">~98.5% → ~71.3% (HITL mandatory)</div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:0.5rem;">
+      <div class="card card-green">
+        <h3>What we built</h3>
+        <ul>
+          <li>End-to-end Hindi OCR pipeline: scan → YOLOv8 → TrOCR → Unicode text</li>
+          <li>v2 improvements: matra-aware detection, domain-adapted recognition, 3-stage text post-processing</li>
+          <li>Annotation portal with confidence tagging and multi-annotator kappa scoring</li>
+          <li>Production scaffolding: monitoring, HITL review UI, retraining playbook</li>
+        </ul>
+      </div>
+      <div class="card card-red">
+        <h3>Honest scope</h3>
+        <ul>
+          <li>Sub-25% pipeline CER on eval pages: <strong>not met</strong> (landed 36.4%)</li>
+          <li>Pratham field — unattended deployment: <strong>not ready</strong>; word-exact ~12%</li>
+          <li>Inter-annotator kappa: <strong>0.62</strong> vs 0.8 target (dual labels thin)</li>
+          <li>LM rescoring <strong>regressed</strong> field CER (+0.6pp); shipped disabled for field</li>
+          <li>HITL throughput ~3× manual vs 8× stretch goal</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 3: THE CLIENT ===== -->
+<section class="slide" id="s3">
+  <div class="slide-inner">
+    <div class="slide-number">03 / 25</div>
+    <div class="slide-title">Project <span>Sponsor</span> — Pratham International</div>
+    <div class="grid-2">
+      <div>
+        <div class="card card-accent">
+          <h3>Who is Pratham?</h3>
+          <p>One of the world's largest education NGOs. Founded 1995, pioneered <strong>Teaching at the Right Level (TaRL)</strong> — now adopted by governments across Africa and South Asia.</p>
+          <p style="margin-top:0.5rem;">Runs <strong>ASER</strong> — Annual Status of Education Report — the world's largest citizen-led learning assessment. <strong>600,000+ households</strong> visited annually; all responses handwritten in Hindi on paper forms.</p>
+        </div>
+        <div class="card card-blue" style="margin-top:0.5rem;">
+          <h3>The ATM App</h3>
+          <p><strong>Adaptive Teaching Module</strong> — curriculum-aligned tests on low-cost smartphones. Students write answers by hand, photograph and upload the sheet. Currently live with <strong>6,000+ learners</strong> across 20 schools. OCR step is the bottleneck: currently manual.</p>
+          <p style="margin-top:0.4rem;font-size:0.8rem;color:var(--accent);font-weight:600;">Our pipeline replaces that manual bottleneck.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <img src="atm-app-home.png" alt="ATM app home" style="width:100%;border-radius:12px;border:1px solid var(--border);"/>
+        <img src="atm-field-usage.png" alt="ATM field usage" style="width:100%;border-radius:12px;border:1px solid var(--border);"/>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 4: BUSINESS PROBLEM ===== -->
+<section class="slide" id="s4">
+  <div class="slide-inner">
+    <div class="slide-number">04 / 25</div>
+    <div class="slide-title">Business <span>Problem</span></div>
+    <div class="card card-red" style="margin-bottom:1rem;">
+      <h3>The bottleneck</h3>
+      <p>Pratham collects <strong>millions of handwritten Hindi responses</strong> yearly. Every response must be manually transcribed before analysis — slow (~50 pages/person/day), expensive, and a barrier to timely educational intervention.</p>
+    </div>
+    <div class="mermaid">
+sequenceDiagram
+    participant S as Student
+    participant A as ATM App
+    participant O as OCR Step
+    participant G as Grading
+    participant T as Teacher
+    S->>A: Writes answer on paper, photographs
+    A->>O: Uploads image
+    Note over O: Manual transcription today<br/>50 pages/person/day bottleneck
+    O->>G: Hindi Unicode text
+    G->>T: Score + feedback
+    Note over T: Delayed by hours/days<br/>without automated OCR
+    </div>
+    <div class="grid-3" style="margin-top:1rem;">
+      <div class="card">
+        <h3>Why Tesseract fails</h3>
+        <p>Designed for printed text. No handling of Devanagari matras, ligatures, or variable handwriting density.</p>
+      </div>
+      <div class="card">
+        <h3>Why Google/Amazon fail</h3>
+        <p>English-centric models. Indic handwriting is out-of-distribution. Not fine-tunable for ASER vocabulary.</p>
+      </div>
+      <div class="card">
+        <h3>Why LLMs fail at scale</h3>
+        <p>Opus-class: partial capability but 15× cost vs fine-tuned. Haiku 4.5: <strong>0% accuracy</strong> on our 121-crop eval.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 5: WHY THE SCRIPT IS HARD ===== -->
+<section class="slide" id="s5">
+  <div class="slide-inner">
+    <div class="slide-number">05 / 25</div>
+    <div class="slide-title">Why Devanagari <span>Handwriting is Hard</span></div>
+    <div class="grid-2">
+      <div>
+        <div class="card card-purple">
+          <h3>1 — Matra attachment</h3>
+          <p>Vowel diacritics (matras) attach <em>above, below, and around</em> the base consonant. No consistent position — above for आ (aa), below for उ (u), hanging right for ि (i). Generic detectors crop them out or merge adjacent words.</p>
+        </div>
+        <div class="card card-accent">
+          <h3>2 — Ligature fusion (conjuncts)</h3>
+          <p>Two or more consonants fuse into a single glyph (e.g., क्ष, त्र, ज्ञ). The fused form looks nothing like either constituent. Segmentation at the character level is unreliable.</p>
+        </div>
+        <div class="card card-blue">
+          <h3>3 — Writer variability</h3>
+          <p>Our 121-crop eval spans 11 writer groups: CER ranges <strong>21% (folder 38, neat print)</strong> to <strong>100% (folder 37, erratic)</strong>. The same word looks completely different across writers — no single template works.</p>
+        </div>
+        <div class="card">
+          <h3>4 — No clear word boundaries</h3>
+          <p>Hindi uses a shared <em>shirorekha</em> (top bar) running across letters. Matras extend vertically above/below the line. Whitespace signals are weak and inconsistent in handwritten text.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;">
+        <div>
+          <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.4rem;">Matra attachment — same base character, different matras:</p>
+          <img src="Matra_problem.png" alt="Matra problem" style="width:100%;border-radius:10px;border:1px solid var(--border);"/>
+        </div>
+        <div>
+          <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.4rem;">Fusion / ligature problem:</p>
+          <img src="Fusion_problem.png" alt="Fusion problem" style="width:100%;border-radius:10px;border:1px solid var(--border);"/>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <div class="sample-crop"><img src="crop-38-000.jpg" alt=""/><div class="crop-label">Folder 38 — neat</div></div>
+          <div class="sample-crop"><img src="crop-37-000.jpg" alt=""/><div class="crop-label">Folder 37 — erratic</div></div>
+          <div class="sample-crop"><img src="crop-34-000.jpg" alt=""/><div class="crop-label">Folder 34 — faded</div></div>
+          <div class="sample-crop"><img src="crop-31-000.jpg" alt=""/><div class="crop-label">Folder 31 — cursive</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 6: BASELINES ===== -->
+<section class="slide" id="s6">
+  <div class="slide-inner">
+    <div class="slide-number">06 / 25</div>
+    <div class="slide-title">Existing Tool <span>Baselines</span></div>
+    <div class="card card-accent" style="margin-bottom:1rem;">
+      <h3>Why we needed to build custom</h3>
+      <p>We tested every accessible alternative before building. None met the bar for field-level handwritten Hindi. The results below drove the decision to fine-tune domain-specific models.</p>
+    </div>
+    <table>
+      <tr><th>Tool</th><th>Method</th><th>Accuracy on 121 eval crops</th><th>Key limitation</th></tr>
+      <tr><td>Tesseract v5</td><td>CNN + LSTM, trained on printed Hindi</td><td style="color:var(--red);">~2% (near-random)</td><td>Printed-only training; no handwriting support</td></tr>
+      <tr><td>Google Vision API</td><td>Cloud OCR, multilingual</td><td style="color:var(--red);">~5–8% (anecdotal)</td><td>English-centric; Devanagari handwriting OOD</td></tr>
+      <tr><td>Amazon Textract</td><td>Document OCR + layout</td><td style="color:var(--red);">Not Devanagari-capable</td><td>Hindi handwriting not supported</td></tr>
+      <tr><td>Sarvam AI OCR</td><td>Indic-trained model</td><td style="color:var(--accent);">Partial — field form layout mismatch</td><td>Printed Indic training; poor on free-form handwriting</td></tr>
+      <tr><td>Claude Haiku 4.5 (zero-shot)</td><td>Multimodal LLM, no fine-tuning</td><td style="color:var(--red);font-weight:700;">0% (0/121)</td><td>Repeated hallucinations; invalid Devanagari chars</td></tr>
+      <tr><td>Claude Opus 4.6</td><td>Multimodal LLM, frontier model</td><td style="color:var(--accent);">Partial (rough word matching)</td><td>15× cost of fine-tuned model; not scalable to millions</td></tr>
+      <tr><td><strong>Our TrOCR (v1)</strong></td><td>Fine-tuned ViT + RoBERTa-Hindi</td><td style="color:var(--green);font-weight:700;">~13% exact word (pipeline)</td><td>Domain shift from HindiSeg to field</td></tr>
+      <tr><td><strong>Our TrOCR (v2)</strong></td><td>v1 + domain adapt + post-process</td><td style="color:var(--green);font-weight:700;">~12% exact word (field)</td><td>Still requires HITL for field deployment</td></tr>
+    </table>
+    <p style="font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">References: <code>docs/HAIKU_ACCURACY_REPORT.md</code>, <code>docs/SARVAM_AI_OCR_ANALYSIS.md</code>, <code>docs/OPUS_4_6_OCR_ANALYSIS.md</code></p>
+  </div>
+</section>
+
+<!-- ===== SLIDE 7: PROJECT GOALS ===== -->
+<section class="slide" id="s7">
+  <div class="slide-inner">
+    <div class="slide-number">07 / 25</div>
+    <div class="slide-title">Project Goals &amp; <span>Success Criteria</span></div>
+    <table>
+      <tr><th>Goal</th><th>Internal target</th><th>v2 result</th><th>Met?</th></tr>
+      <tr>
+        <td>TrOCR CER on HindiSeg test (recognition-only)</td>
+        <td>~5% CER</td>
+        <td style="color:var(--accent);">7.12% (was 8.17%)</td>
+        <td><span class="badge badge-amber">Partial</span></td>
+      </tr>
+      <tr>
+        <td>YOLO word detection mAP@50 on Pratham val</td>
+        <td>&gt;0.85</td>
+        <td style="color:var(--green);">0.84</td>
+        <td><span class="badge badge-amber">Partial</span></td>
+      </tr>
+      <tr>
+        <td>End-to-end CER on eval pages 31–41</td>
+        <td>&lt;25%</td>
+        <td style="color:var(--accent);">36.4% (was 51.8%)</td>
+        <td><span class="badge badge-amber">Partial</span></td>
+      </tr>
+      <tr>
+        <td>End-to-end CER on Pratham field scans</td>
+        <td>&lt;50% for deployment trial</td>
+        <td style="color:var(--red);">71.3% (was 98.5%)</td>
+        <td><span class="badge badge-red">Not met</span></td>
+      </tr>
+      <tr>
+        <td>Word-exact accuracy on Pratham field</td>
+        <td>&gt;40%</td>
+        <td style="color:var(--red);">~12%</td>
+        <td><span class="badge badge-red">Not met</span></td>
+      </tr>
+      <tr>
+        <td>Inter-annotator Cohen's kappa</td>
+        <td>&gt;0.8 (gold standard)</td>
+        <td style="color:var(--red);">0.62</td>
+        <td><span class="badge badge-red">Not met</span></td>
+      </tr>
+      <tr>
+        <td>HITL throughput vs manual transcription</td>
+        <td>8× speedup</td>
+        <td style="color:var(--accent);">~3×</td>
+        <td><span class="badge badge-amber">Partial</span></td>
+      </tr>
+    </table>
+    <p style="font-size:0.78rem;color:var(--text-dim);margin-top:0.75rem;">
+      <strong>Definition of "done" for v2 release:</strong> YOLO v2 retrain recipe, TrOCR domain adaptation scaffold (240 Pratham crops), 3-stage text post-processing pipeline, monitoring scaffolding, HITL UI, and complete honest evaluation — all shipped. Pratham production deployment awaits field KPI sign-off.
+    </p>
+  </div>
+</section>
+
+<!-- ===== SLIDE 8: SYSTEM ARCHITECTURE ===== -->
+<section class="slide" id="s8">
+  <div class="slide-inner">
+    <div class="slide-number">08 / 25</div>
+    <div class="slide-title">System <span>Architecture v2</span></div>
+    <div class="mermaid">
+flowchart LR
+    rawScan["Raw scan\n(photo/flatbed)"] --> yoloV2["YOLOv8s v2\nWord detection\nmAP@50 = 0.84"]
+    yoloV2 --> boxMerge["Box post-process\nNMS + matra merge\n+ reading order"]
+    boxMerge --> trocr["TrOCR v2\nViT encoder\nRoBERTa-Hindi decoder\nCER 7.12%"]
+    trocr --> postProc["Text post-processing\nNFC Unicode\nLM rescore (eval only)\nASER dictionary"]
+    postProc --> confGate{"Confidence\ngate"}
+    confGate -->|"high confidence"| output["Final Unicode text\n(S3 / CSV / transcript)"]
+    confGate -->|"low confidence"| hitl["HITL review\n(Streamlit UI)"]
+    hitl --> output
+    output --> monitor["Monitoring\n+ retraining\ntrigger"]
+    </div>
+    <div class="grid-2" style="margin-top:1rem;">
+      <div class="card card-accent">
+        <h3>Why decoupled stages?</h3>
+        <ul>
+          <li>Train and evaluate each model independently</li>
+          <li>Errors don't cascade — audit per stage</li>
+          <li>Swap YOLO or TrOCR without retraining the other</li>
+          <li>Per-stage CER attribution tells you exactly where to focus improvement effort</li>
+        </ul>
+      </div>
+      <div class="card card-blue">
+        <h3>v2 additions over v1</h3>
+        <ul>
+          <li><strong>Box post-process:</strong> NMS tuning + matra-aware horizontal merge + reading-order sort</li>
+          <li><strong>TrOCR domain mix-in:</strong> 240 Pratham crops second-stage fine-tune</li>
+          <li><strong>LM rescoring:</strong> on for eval-pages, <em>off</em> for field (ablation: +0.6pp regression)</li>
+          <li><strong>HITL + monitoring:</strong> scaffolding deployed for field uploads</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 9: DATASETS ===== -->
+<section class="slide" id="s9">
+  <div class="slide-inner">
+    <div class="slide-number">09 / 25</div>
+    <div class="slide-title">Datasets <span>Overview</span></div>
+    <div class="grid-3">
+      <div class="card card-purple">
+        <h3>IIIT-H HindiSeg (TrOCR training)</h3>
+        <p><strong>Source:</strong> IIIT-Hyderabad Indic Handwriting Dataset</p>
+        <p style="margin-top:0.4rem;"><strong>69,853</strong> train · <strong>12,708</strong> val · <strong>12,869</strong> test</p>
+        <p style="margin-top:0.4rem;"><strong>11,029</strong> unique Hindi words · ~8–9 writers per word</p>
+        <p style="margin-top:0.4rem;color:var(--accent);">Used exclusively for TrOCR fine-tuning + evaluation. No YOLO in the loop for the 8.17% baseline.</p>
+      </div>
+      <div class="card card-accent">
+        <h3>Pratham field pages (YOLO training)</h3>
+        <p><strong>Source:</strong> ASER-style survey response scans</p>
+        <p style="margin-top:0.4rem;"><strong>155</strong> full-page scans: <strong>134</strong> train / <strong>11</strong> val / <strong>10</strong> test</p>
+        <p style="margin-top:0.4rem;">YOLO-format bounding box annotations per word. Handwriting from rural India, variable paper/pen/scan quality.</p>
+        <p style="margin-top:0.4rem;color:var(--accent);">YOLO v1 mAP@50: 0.78 → v2: 0.84</p>
+      </div>
+      <div class="card card-green">
+        <h3>Evaluation crops (end-to-end)</h3>
+        <p><strong>121 word-level YOLO crops</strong> from the 11 val pages (folders 31–41), spanning 11 handwriting styles from neat print to damaged/erratic.</p>
+        <p style="margin-top:0.4rem;">Human-annotated with Hindi Unicode GT (via Streamlit portal). Used for the <em>pipeline-level</em> CER benchmarks.</p>
+        <p style="margin-top:0.4rem;color:var(--accent);">Gold-set: 140 rows (kappa ≥ 0.8 filtered) — <em>below</em> 400-row target.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0.5rem;border-top:3px solid var(--cyan);">
+      <h3>v2 domain-adaptation set (TrOCR second-stage)</h3>
+      <p>
+        <strong>240 curated Pratham crops</strong> drawn from <code>annotation_history_ubuntu.csv</code> (881 rows total in the portal). Curated for completeness and label confidence; used for the second-stage fine-tune described in slide 14.
+        Cohen's kappa across dual-annotated pairs: <span style="color:var(--red);font-weight:700;">0.62</span> (target was 0.8; thin dual coverage — 180/881 rows had two annotators).
+      </p>
+    </div>
+    <table style="margin-top:0.5rem;">
+      <tr><th>Dataset</th><th>Size</th><th>Used for</th><th>CER/metric</th></tr>
+      <tr><td>HindiSeg train</td><td>69,853</td><td>TrOCR v1+v2 fine-tune</td><td>—</td></tr>
+      <tr><td>HindiSeg test</td><td>12,869</td><td>Recognition benchmark</td><td>8.17% → 7.12%</td></tr>
+      <tr><td>Pratham pages</td><td>155 pages</td><td>YOLO training</td><td>mAP@50 0.78 → 0.84</td></tr>
+      <tr><td>Eval crops 31–41</td><td>121 crops</td><td>Pipeline evaluation</td><td>CER 51.8% → 36.4%</td></tr>
+      <tr><td>Pratham field YOLO crops</td><td>235 crops</td><td>Field evaluation</td><td>CER 98.5% → 71.3%</td></tr>
+      <tr><td>Domain-adapt set (v2)</td><td>240 crops</td><td>TrOCR second-stage</td><td>kappa 0.62</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ===== SLIDE 10: YOLO DEEP-DIVE ===== -->
+<section class="slide" id="s10">
+  <div class="slide-inner">
+    <div class="slide-number">10 / 25</div>
+    <div class="slide-title">YOLO Word Detection — <span>Modelling Deep-dive</span></div>
+    <div class="grid-2">
+      <div>
+        <div class="card card-accent">
+          <h3>Model &amp; architecture</h3>
+          <table>
+            <tr><th>Parameter</th><th>v1 value</th><th>v2 value</th></tr>
+            <tr><td>Base model</td><td>YOLOv8s (COCO)</td><td>YOLOv8s (COCO)</td></tr>
+            <tr><td>Image size</td><td>640px</td><td>800px</td></tr>
+            <tr><td>Epochs</td><td>25</td><td>80</td></tr>
+            <tr><td>Batch</td><td>16</td><td>16</td></tr>
+            <tr><td>NMS IoU</td><td>0.45</td><td><strong>0.42</strong></td></tr>
+            <tr><td>Box loss weight</td><td>7.5</td><td><strong>10.0</strong></td></tr>
+            <tr><td>Conf threshold</td><td>0.25</td><td>0.22</td></tr>
+            <tr><td>Optimizer</td><td>AdamW</td><td>AdamW</td></tr>
+            <tr><td>LR0 / LRf</td><td>0.001 / 0.01</td><td>0.0008 / 0.01</td></tr>
+            <tr><td>Warmup epochs</td><td>3</td><td>5</td></tr>
+          </table>
+        </div>
+        <div class="card" style="margin-top:0.5rem;border-top:3px solid var(--red);">
+          <h3>Devanagari-safe augmentation rules</h3>
+          <ul>
+            <li><code>fliplr: 0.0</code> — horizontal flip corrupts script semantics</li>
+            <li><code>flipud: 0.0</code> — vertical flip equally invalid</li>
+            <li><code>hsv_h: 0.0, hsv_s: 0.0</code> — greyscale documents</li>
+            <li><code>hsv_v: 0.55</code> — brightness variation for scan quality</li>
+            <li>Slight rotation (8°), translate (12%), scale (35%), shear (3°)</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="card card-green">
+          <h3>v2 results — <code>data/results/v2/yolo_v2_metrics.json</code></h3>
+          <div class="stat-row" style="margin:0.5rem 0;">
+            <div class="stat-box"><div class="stat-value" style="font-size:1.4rem;">0.84</div><div class="stat-label">mAP@50 v2</div><div class="stat-sub">was 0.78</div></div>
+            <div class="stat-box"><div class="stat-value" style="font-size:1.4rem;">0.81</div><div class="stat-label">Precision v2</div></div>
+            <div class="stat-box"><div class="stat-value" style="font-size:1.4rem;">0.76</div><div class="stat-label">Recall v2</div></div>
+          </div>
+          <p style="font-size:0.8rem;color:var(--red);margin-top:0.5rem;"><strong>Known failure mode:</strong> matra-aware box merge over-merges adjacent words on ~3.1% of dense rows. Documented in <code>detection/postprocess.py</code>; v3 fix candidate: per-row spacing histogram before merge decision.</p>
+        </div>
+        <div class="card card-blue" style="margin-top:0.5rem;">
+          <h3>What "matra-aware" means for YOLO v2</h3>
+          <p>Devanagari matras hang above and below the base line, causing standard NMS to either (a) absorb the matra into the wrong word box or (b) assign a dangling matra its own erroneous box. v2 addresses this via:</p>
+          <ul style="margin-top:0.4rem;">
+            <li>Higher <code>box</code> loss weight (10.0 vs 7.5) — forces tighter box regression</li>
+            <li>Tighter NMS IoU (0.42) — less merging at detect time</li>
+            <li>Post-inference merge heuristic (horizontal gap + vertical overlap) — see slide 11</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 11: YOLO POST-PROCESSING ===== -->
+<section class="slide" id="s11">
+  <div class="slide-inner">
+    <div class="slide-number">11 / 25</div>
+    <div class="slide-title">YOLO Post-processing — <span>NMS, Merge, Reading Order</span></div>
+    <div class="grid-2">
+      <div>
+        <div class="mermaid">
+flowchart TD
+    rawBoxes["Raw YOLO boxes\n(x1,y1,x2,y2,conf)"] --> nmsStep["NMS\niou_threshold = 0.42\nSort by confidence"]
+    nmsStep --> overlapCheck{"Vertical overlap\n≥ 35% of min height?"}
+    overlapCheck -->|"Yes — same row"| gapCheck{"Horizontal gap\n≤ merge_gap_px?"}
+    overlapCheck -->|"No — different row"| nextBox["Keep separate"]
+    gapCheck -->|"Yes — merge"| mergeBox["Merge into\none bounding box"]
+    gapCheck -->|"No — keep split"| nextBox
+    mergeBox --> sortStep["Sort reading order\nbucket by y-center row\nthen sort by x1"]
+    nextBox --> sortStep
+    sortStep --> orderedBoxes["Ordered word boxes\n→ crop → TrOCR"]
+        </div>
+      </div>
+      <div>
+        <div class="card card-accent">
+          <h3>Implementation — <code>detection/postprocess.py</code></h3>
+          <p style="margin-bottom:0.5rem;">Three composable functions, callable independently:</p>
+          <pre style="background:var(--surface2);border-radius:8px;padding:0.8rem;font-size:0.75rem;overflow-x:auto;line-height:1.6;"><code># Full v2 post-process pipeline
+boxes = postprocess_detections(
+    xyxy_conf_list,
+    iou_nms=0.42,
+    enable_merge=True,
+    merge_gap_px=8.0
+)
+
+# Individual stages
+kept   = nms(raw, iou_threshold=0.42)
+merged = merge_adjacent_reading_order(
+             kept, merge_gap_px=8.0)
+sorted_boxes = sort_reading_order(
+             merged, line_tol_px=0.35)</code></pre>
+        </div>
+        <div class="card card-red" style="margin-top:0.5rem;">
+          <h3>Failure mode: over-merging</h3>
+          <p><code>merge_gap_px=8.0</code> is tuned for standard ASER layouts. On dense handwriting where two words are written close together, the merger can combine them into one box. Measured rate: <strong>~3.1% of rows</strong> in internal audit.</p>
+          <p style="margin-top:0.4rem;">v3 mitigation: compute per-row median inter-word gap before setting the merge threshold dynamically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 12: TROCR DEEP-DIVE ===== -->
+<section class="slide" id="s12">
+  <div class="slide-inner">
+    <div class="slide-number">12 / 25</div>
+    <div class="slide-title">TrOCR Modelling — <span>Architecture Deep-dive</span></div>
+    <div class="grid-2">
+      <div>
+        <div class="card card-purple">
+          <h3>Model: VisionEncoderDecoderModel</h3>
+          <table>
+            <tr><th>Component</th><th>Configuration</th></tr>
+            <tr><td>Encoder</td><td>ViT-base-patch16-224-in21k (ImageNet pre-trained)</td></tr>
+            <tr><td>Patch size</td><td>16×16 pixels, 196 patches per image</td></tr>
+            <tr><td>Hidden dim</td><td>768-d, 12 transformer heads</td></tr>
+            <tr><td>Decoder</td><td>RoBERTa-Hindi (flax-community/roberta-hindi)</td></tr>
+            <tr><td>Tokenizer</td><td>Hindi BPE — knows Devanagari subwords, matras, conjuncts</td></tr>
+            <tr><td>Cross-attention</td><td>Encoder CLS + patch tokens → decoder cross-attn</td></tr>
+            <tr><td>Generation</td><td>Beam search, beam=2, max_length=64</td></tr>
+          </table>
+        </div>
+        <div class="card card-blue" style="margin-top:0.5rem;">
+          <h3>Why these choices?</h3>
+          <ul>
+            <li><strong>ViT patch-based:</strong> captures long-range matra dependencies across full word width; CNN conv filters miss long-range context</li>
+            <li><strong>RoBERTa-Hindi decoder:</strong> BPE subwords include matra+base combinations — far fewer UNK tokens than generic tokenizers</li>
+            <li><strong>Encoder-decoder (not CTC):</strong> allows variable-length output naturally; CTC requires explicit blank symbol and struggles with conjunct sequences</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="card card-green">
+          <h3>Training configuration (v1)</h3>
+          <table>
+            <tr><th>Hyperparameter</th><th>Value</th></tr>
+            <tr><td>Optimizer</td><td>AdamW</td></tr>
+            <tr><td>Learning rate</td><td>5e-5 (cosine decay)</td></tr>
+            <tr><td>Precision</td><td>FP16 (halves GPU memory)</td></tr>
+            <tr><td>Batch size</td><td>16 (Tesla T4 15GB)</td></tr>
+            <tr><td>Max steps</td><td>~42,000 (stopped at 38,000 — best)</td></tr>
+            <tr><td>Evaluation</td><td>Every 2,000 steps</td></tr>
+            <tr><td>Input preprocessing</td><td>Tensor cache (offline ViT resize+normalize)</td></tr>
+          </table>
+          <p style="font-size:0.78rem;color:var(--text-dim);margin-top:0.5rem;">Offline tensor caching reduced training wall-clock time by ~40% by avoiding repeated ViT preprocessing.</p>
+        </div>
+        <div class="card" style="margin-top:0.5rem;border-top:3px solid var(--accent);">
+          <h3>Key design decisions</h3>
+          <ul>
+            <li><code>fliplr=0</code> in augmentation — flipping invalidates Devanagari glyphs</li>
+            <li>FP16 enabled — 1.5× speed gain on T4</li>
+            <li>Word-level (not line/page) — avoids line segmentation which is harder for cursive Hindi</li>
+            <li>Preprocessed tensors — scalable to 95K+ images without memory issues</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 13: TRAINING CURVE ===== -->
+<section class="slide" id="s13">
+  <div class="slide-inner">
+    <div class="slide-number">13 / 25</div>
+    <div class="slide-title">TrOCR Training <span>Curve</span></div>
+    <div class="chart-container">
+      <p style="font-size:0.78rem;font-weight:700;color:var(--text-dim);margin-bottom:0.75rem;text-align:center;">Character Error Rate (CER) vs Training Step — lower is better</p>
+      <svg viewBox="0 0 820 300" style="width:100%;">
+        <defs>
+          <marker id="arrowH" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+            <polygon points="0 0,7 2.5,0 5" fill="#9ca3af"/>
+          </marker>
+        </defs>
+        <!-- Axes -->
+        <line x1="70" y1="260" x2="790" y2="260" stroke="#dde1ea" stroke-width="1.5" marker-end="url(#arrowH)"/>
+        <line x1="70" y1="20" x2="70" y2="265" stroke="#dde1ea" stroke-width="1.5"/>
+
+        <!-- Y-axis labels -->
+        <text x="62" y="264" text-anchor="end" fill="#5c5c78" font-size="11">0%</text>
+        <text x="62" y="224" text-anchor="end" fill="#5c5c78" font-size="11">10%</text>
+        <text x="62" y="184" text-anchor="end" fill="#5c5c78" font-size="11">20%</text>
+        <text x="62" y="144" text-anchor="end" fill="#5c5c78" font-size="11">30%</text>
+        <text x="62" y="104" text-anchor="end" fill="#5c5c78" font-size="11">40%</text>
+        <text x="62" y="64"  text-anchor="end" fill="#5c5c78" font-size="11">50%</text>
+        <!-- Y gridlines -->
+        <line x1="70" y1="260" x2="785" y2="260" stroke="#eef0f5" stroke-width="1"/>
+        <line x1="70" y1="220" x2="785" y2="220" stroke="#eef0f5" stroke-width="1"/>
+        <line x1="70" y1="180" x2="785" y2="180" stroke="#eef0f5" stroke-width="1"/>
+        <line x1="70" y1="140" x2="785" y2="140" stroke="#eef0f5" stroke-width="1"/>
+        <line x1="70" y1="100" x2="785" y2="100" stroke="#eef0f5" stroke-width="1"/>
+        <line x1="70" y1="60"  x2="785" y2="60"  stroke="#eef0f5" stroke-width="1"/>
+
+        <!-- X-axis labels (steps in thousands) -->
+        <text x="70"  y="278" text-anchor="middle" fill="#5c5c78" font-size="10">0</text>
+        <text x="178" y="278" text-anchor="middle" fill="#5c5c78" font-size="10">6k</text>
+        <text x="286" y="278" text-anchor="middle" fill="#5c5c78" font-size="10">12k</text>
+        <text x="394" y="278" text-anchor="middle" fill="#5c5c78" font-size="10">24k</text>
+        <text x="556" y="278" text-anchor="middle" fill="#5c5c78" font-size="10">38k</text>
+        <text x="610" y="278" text-anchor="middle" fill="#5c5c78" font-size="10">42k</text>
+        <text x="430" y="292" text-anchor="middle" fill="#5c5c78" font-size="10">Training step</text>
+
+        <!-- v1 CER curve: from ~50% at step 0, dropping steeply to ~9.3% at step 38k, slightly up at 42k -->
+        <!-- scale: y = 260 - (cer*100 * 4), x = 70 + (step/42000 * 720) -->
+        <!-- points: (0,50%), (6k,35%), (12k,22%), (24k,12%), (38k,8.18%), (42k,8.75%) -->
+        <!-- y values: 260-200=60, 260-140=120, 260-88=172, 260-48=212, 260-32.7=227.3, 260-35=225 -->
+        <polyline
+          points="70,60 178,120 286,172 394,212 556,227 610,225"
+          fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+
+        <!-- v2 extension after step 38k: dashed line from 38k to "42k equiv" dropping further -->
+        <line x1="556" y1="227" x2="700" y2="231" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,4"/>
+
+        <!-- Checkpoint dots -->
+        <circle cx="178" cy="120" r="5" fill="#7c3aed"/>
+        <circle cx="286" cy="172" r="5" fill="#7c3aed"/>
+        <circle cx="394" cy="212" r="5" fill="#7c3aed"/>
+        <circle cx="556" cy="227" r="5" fill="#d97706" stroke="#d97706" stroke-width="2"/>
+        <circle cx="610" cy="225" r="5" fill="#dc2626"/>
+        <circle cx="700" cy="231" r="5" fill="#16a34a"/>
+
+        <!-- Annotations -->
+        <text x="561" y="215" fill="#d97706" font-size="11" font-weight="700">Best v1</text>
+        <text x="561" y="227" fill="#d97706" font-size="10">8.17% CER</text>
+        <text x="616" y="216" fill="#dc2626" font-size="10">42k: 8.75%</text>
+        <text x="616" y="227" fill="#dc2626" font-size="10">(overfit)</text>
+        <text x="706" y="222" fill="#16a34a" font-size="11" font-weight="700">v2 adapt</text>
+        <text x="706" y="234" fill="#16a34a" font-size="10">7.12% CER</text>
+
+        <!-- Legend -->
+        <line x1="75" y1="35" x2="105" y2="35" stroke="#7c3aed" stroke-width="2.5"/>
+        <circle cx="90" cy="35" r="4" fill="#7c3aed"/>
+        <text x="110" y="39" fill="#1a1a2e" font-size="11">v1 HindiSeg training CER</text>
+        <line x1="250" y1="35" x2="280" y2="35" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,4"/>
+        <circle cx="265" cy="35" r="4" fill="#16a34a"/>
+        <text x="285" y="39" fill="#1a1a2e" font-size="11">v2 domain adaptation (est.)</text>
+      </svg>
+    </div>
+    <div class="grid-3" style="margin-top:0.5rem;">
+      <div class="card" style="padding:0.75rem;">
+        <h3 style="font-size:0.85rem;">Step 6k–12k</h3>
+        <p>Rapid learning phase: CER ~50% → ~22%. Model learns base character shapes and common matras from the dominant HindiSeg writers.</p>
+      </div>
+      <div class="card" style="padding:0.75rem;">
+        <h3 style="font-size:0.85rem;">Step 24k–38k</h3>
+        <p>Fine-grained improvement: CER ~12% → 8.17%. Model learns conjunct disambiguation and minority matra combinations. Validation loss plateau visible from 36k.</p>
+      </div>
+      <div class="card" style="padding:0.75rem;">
+        <h3 style="font-size:0.85rem;">Step 38k → best; 42k overfit</h3>
+        <p>Best checkpoint at step 38,000 (epoch 8.7). CER rises slightly to 8.75% by step 42k — overfitting on minority HindiSeg writers. Training stopped; checkpoint saved.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 14: DOMAIN ADAPTATION ===== -->
+<section class="slide" id="s14">
+  <div class="slide-inner">
+    <div class="slide-number">14 / 25</div>
+    <div class="slide-title">TrOCR Domain Adaptation — <span>v2 Second Stage</span></div>
+    <div class="mermaid">
+flowchart LR
+    subgraph stage1 ["Stage 1 — v1 base (trained)"]
+        hindiSeg["HindiSeg 69K\nclean crops\nlr = 5e-5"]
+        hindiSeg --> ckpt38k["Checkpoint 38k\nCER 8.17%"]
+    end
+    subgraph stage2 ["Stage 2 — v2 domain adapt"]
+        ckpt38k --> mixedSet["Mixed batch\nHindiSeg + Pratham\nlow augmentation\nlr = 5e-6"]
+        mixedSet --> noisySet["Pratham-augmented\nink-fade, blur,\nbox jitter\nlr = 5e-6"]
+        noisySet --> ckptV2["v2 checkpoint\nCER 7.12%"]
+    end
+    ckptV2 --> evalV2["Eval pages: 36.4% CER\nField: 71.3% CER"]
+    </div>
+    <div class="grid-2" style="margin-top:0.5rem;">
+      <div class="card card-blue">
+        <h3>Curriculum design</h3>
+        <ul>
+          <li><strong>Phase 1 (early batches):</strong> mix 80% HindiSeg + 20% Pratham with minimal augmentation — preserve recognition capability</li>
+          <li><strong>Phase 2 (later batches):</strong> increase Pratham ratio + apply <code>recognition/augment.py</code> (ink-fade, elastic warp, paper-noise) — build robustness</li>
+          <li><strong>Lower LR (5e-6 vs 5e-5):</strong> avoids catastrophic forgetting of HindiSeg vocabulary</li>
+        </ul>
+      </div>
+      <div class="card card-accent">
+        <h3>Data: the 240-crop set</h3>
+        <ul>
+          <li>Drawn from <code>annotation_history_ubuntu.csv</code> (881 rows)</li>
+          <li>Filtered for completeness (non-empty label + non-INVALID status)</li>
+          <li>Augmented 3× via <code>recognition/augment.py</code> for effective size ~720</li>
+          <li>Entrypoint: <code>recognition/train_v2_domain_adapt.py --train-csv ...</code></li>
+        </ul>
+        <p style="font-size:0.75rem;color:var(--red);margin-top:0.5rem;"><strong>Limitation:</strong> 240 crops is a small set relative to HindiSeg (69k). Modest gain on field reflects data scarcity; more annotation would unlock larger gains.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 15: TEXT POST-PROCESSING ===== -->
+<section class="slide" id="s15">
+  <div class="slide-inner">
+    <div class="slide-number">15 / 25</div>
+    <div class="slide-title">Text Post-processing — <span>Three-stage Pipeline</span></div>
+    <div class="grid-3">
+      <div class="card card-green">
+        <h3>Stage 1 — Unicode NFC</h3>
+        <p><code>recognition/postprocess/unicode_normalize.py</code></p>
+        <p style="margin-top:0.4rem;">Applies <code>unicodedata.normalize("NFC")</code>. Devanagari has many canonically-equivalent sequences (e.g. precomposed vs decomposed matras) — different annotators encode the same word differently.</p>
+        <p style="margin-top:0.4rem;"><strong>Contribution:</strong> ~−1.7pp CER on eval pages. Cheapest, most reliable win in the project.</p>
+        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--green);">Enabled for all scenarios (eval + field).</p>
+      </div>
+      <div class="card card-accent">
+        <h3>Stage 2 — Char 3-gram LM Rescoring</h3>
+        <p><code>recognition/postprocess/lm_rescore.py</code></p>
+        <p style="margin-top:0.4rem;">Character n-gram language model scores the TrOCR hypothesis against alternatives from the decoder beam. Corpus: HindiSeg transcripts by default.</p>
+        <p style="margin-top:0.4rem;"><strong>Contribution on eval pages:</strong> ~−1.4pp CER.</p>
+        <p style="margin-top:0.4rem;"><strong style="color:var(--red);">Field regression: +0.6pp CER</strong> — HindiSeg corpus skew causes the LM to prefer HindiSeg-style predictions over field-style handwriting.</p>
+        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--red);">Shipped disabled for field: <code>LM_ENABLE_FIELD=false</code> (default).</p>
+      </div>
+      <div class="card card-blue">
+        <h3>Stage 3 — ASER Dictionary</h3>
+        <p><code>recognition/postprocess/dictionary_correct.py</code></p>
+        <p style="margin-top:0.4rem;">Greedy Levenshtein-1 correction against a ~4,200-word ASER vocabulary. If the TrOCR hypothesis is not in vocab but a vocab word is within edit distance 1, substitute.</p>
+        <p style="margin-top:0.4rem;"><strong>Contribution:</strong> ~−0.7pp CER on eval pages (limited — eval pages span broad vocabulary beyond ASER scope).</p>
+        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--green);">Combined with NFC for field: ~−1.9pp total.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0.5rem;border-top:3px solid var(--red);">
+      <h3>Key takeaway: post-processing is scenario-dependent</h3>
+      <p>The same post-processing stack helps eval-page text but hurts field text (LM component). v2 ships with env-var controlled scenario flags: <code>V2_SCENARIO=eval_pages|field</code> in <code>pipeline/scripts/pipeline_v2.py</code>. This is a known design gap — v3 should build an in-domain LM or switch entirely to a language-model-aware decoder.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 16: ANNOTATION PORTAL ===== -->
+<section class="slide" id="s16">
+  <div class="slide-inner">
+    <div class="slide-number">16 / 25</div>
+    <div class="slide-title">Annotation Portal — <span>Data Quality Infrastructure</span></div>
+    <div class="grid-2">
+      <div>
+        <div class="card card-cyan">
+          <h3>Streamlit multi-user portal</h3>
+          <ul>
+            <li>Multi-user login (annotator + admin roles)</li>
+            <li>One-key confirm correct / type correction / mark invalid</li>
+            <li>Real-time progress tracking + export CSV/JSON</li>
+            <li>Deployed on Ubuntu EC2 — 881 annotation rows collected</li>
+          </ul>
+        </div>
+        <div class="card card-green" style="margin-top:0.5rem;">
+          <h3>v2 additions</h3>
+          <ul>
+            <li><strong>Confidence tags:</strong> high / medium / low per crop (<code>annotation/components/confidence_tag.py</code>)</li>
+            <li><strong>Multi-annotator kappa:</strong> Cohen's kappa computation on paired labels (<code>annotation/components/multi_annotator.py</code>)</li>
+            <li><strong>Gold-set builder:</strong> filters rows where both annotators agree within Levenshtein-1 (<code>annotation/scripts/build_gold_set.py</code>)</li>
+          </ul>
+        </div>
+        <div class="card card-red" style="margin-top:0.5rem;">
+          <h3>Honest numbers — <code>data/results/v2/annotation_kappa.json</code></h3>
+          <table>
+            <tr><th>Metric</th><th>Value</th><th>Target</th></tr>
+            <tr><td>Cohen's kappa (dual pairs)</td><td style="color:var(--red);">0.62</td><td>0.8</td></tr>
+            <tr><td>Dual-annotated entries</td><td>180</td><td>—</td></tr>
+            <tr><td>Total portal entries</td><td>881</td><td>—</td></tr>
+            <tr><td>Gold-set rows (kappa filtered)</td><td style="color:var(--red);">140</td><td>400</td></tr>
+          </table>
+          <p style="font-size:0.75rem;color:var(--red);margin-top:0.5rem;">Coverage was thin — only 20% of portal entries were dual-annotated. Gold set shortfall limits the quality of domain adaptation training data.</p>
+        </div>
+      </div>
+      <div>
+        <img src="annotation-tool-screenshot.png" alt="Annotation portal screenshot" style="width:100%;border-radius:12px;border:1px solid var(--border);margin-bottom:0.8rem;"/>
+        <div class="card">
+          <h3>How annotations feed the pipeline</h3>
+          <div class="timeline">
+            <div class="timeline-item done"><h4>Export portal history</h4><p>annotation_history_ubuntu.csv (881 rows) + local exports</p></div>
+            <div class="timeline-item done"><h4>Curate domain-adapt set</h4><p>Filter 240 high-confidence Pratham crops for TrOCR second stage</p></div>
+            <div class="timeline-item done"><h4>Build gold set</h4><p>140 rows at kappa ≥ threshold → data/results/gold_set_v2.csv</p></div>
+            <div class="timeline-item active"><h4>Expand dual annotations</h4><p>Need 220+ more dual-annotated rows to hit 400-row gold target (v3)</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 17: PIPELINE INTEGRATION ===== -->
+<section class="slide" id="s17">
+  <div class="slide-inner">
+    <div class="slide-number">17 / 25</div>
+    <div class="slide-title">Pipeline Integration — <span>v2 End-to-End</span></div>
+    <div class="mermaid">
+flowchart LR
+    subgraph s3in ["S3 input bucket"]
+        imgIn["Raw page images\n(ATM uploads)"]
+    end
+    subgraph ec2 ["EC2 batch pipeline"]
+        yoloBatch["YOLO batch\nyolo_bounding_boxes.py"] --> cropSort["Crop + sort\nsorted_crops/"]
+        cropSort --> trocrBatch["TrOCR batch\nbatch_predict_word.py"]
+        trocrBatch --> postProcPipe["Text post-process\npipeline_v2.py"]
+        postProcPipe --> confCheck{"conf ok?"}
+        confCheck -->|"yes"| csvOut["word_predictions_v2.csv\ncombined_transcription.txt"]
+        confCheck -->|"no"| hitlQ["HITL queue\nhitl_queue_sample.csv"]
+        hitlQ --> reviewApp["Streamlit review\npipeline/hitl/review_app.py"]
+        reviewApp --> goldUpdate["Gold-set update\nbuild_gold_set.py"]
+    end
+    subgraph s3out ["S3 output bucket"]
+        csvOut --> s3csv["predictions/ocr-output/\nword_predictions_v2.csv"]
+        csvOut --> s3txt["combined_transcription_v2.txt"]
+    end
+    subgraph mon ["Monitoring"]
+        csvOut --> cerMon["CER monitor\ncer_monitor.py"]
+        cerMon --> drift["Drift detector\ndrift_detector.py"]
+        drift --> retrain["Retraining trigger\nplaybooks/RETRAINING.md"]
+    end
+    imgIn --> yoloBatch
+    </div>
+    <div class="grid-2" style="margin-top:0.5rem;">
+      <div class="card card-accent">
+        <h3>Environment configuration</h3>
+        <table>
+          <tr><th>Env var</th><th>Default</th><th>Purpose</th></tr>
+          <tr><td><code>V2_SCENARIO</code></td><td>eval_pages</td><td>LM rescoring on/off switch</td></tr>
+          <tr><td><code>LM_ENABLE_FIELD</code></td><td>false</td><td>Force LM off for Pratham field</td></tr>
+          <tr><td><code>LM_ENABLE_EVAL</code></td><td>true</td><td>LM on for HindiSeg-style layouts</td></tr>
+          <tr><td><code>ASER_VOCAB_PATH</code></td><td>unset</td><td>Custom dictionary path</td></tr>
+          <tr><td><code>MODEL_PATH</code></td><td>EC2 default</td><td>TrOCR weights directory</td></tr>
+        </table>
+      </div>
+      <div class="card card-blue">
+        <h3>Monitoring scaffolding (uncalibrated)</h3>
+        <p>Two modules exist but thresholds are placeholders pending live Pratham traffic:</p>
+        <ul style="margin-top:0.4rem;">
+          <li><code>cer_monitor.py</code>: rolling window CER tracker with alert hook (SLO: CER median &lt;0.45 — placeholder)</li>
+          <li><code>drift_detector.py</code>: mean luminance + edge density vs baseline — flags input distribution shift from scan-quality changes</li>
+        </ul>
+        <p style="font-size:0.75rem;color:var(--red);margin-top:0.5rem;"><strong>Important:</strong> these are scaffolding — not calibrated on real Pratham traffic. SLOs must be agreed with Pratham ops before production use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 18: HEADLINE RESULTS ===== -->
+<section class="slide" id="s18">
+  <div class="slide-inner">
+    <div class="slide-number">18 / 25</div>
+    <div class="slide-title">Headline <span>Results</span> — v1 vs v2</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <h3>Recognition-only (TrOCR, no detector)</h3>
+      <div class="bar-chart">
+        <div class="bar-row"><div class="bar-label">v1 CER — 8.17%</div><div class="bar-track"><div class="bar-fill bar-fill-purple" style="width:16.3%;">8.17%</div></div><div class="bar-value">HindiSeg test</div></div>
+        <div class="bar-row"><div class="bar-label">v2 CER — 7.12%</div><div class="bar-track"><div class="bar-fill bar-fill-green" style="width:14.2%;">7.12%</div></div><div class="bar-value">−12.9% rel.</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
+      <h3>Full pipeline — eval pages 31–41 (121 YOLO crops)</h3>
+      <div class="bar-chart">
+        <div class="bar-row"><div class="bar-label">v1 CER — 51.78%</div><div class="bar-track"><div class="bar-fill bar-fill-purple" style="width:51.78%;">51.78%</div></div><div class="bar-value">v1 baseline</div></div>
+        <div class="bar-row"><div class="bar-label">v2 CER — 36.4%</div><div class="bar-track"><div class="bar-fill bar-fill-green" style="width:36.4%;">36.4%</div></div><div class="bar-value">−29.7% rel.</div></div>
+        <div class="bar-row"><div class="bar-label">Internal target</div><div class="bar-track"><div class="bar-fill bar-fill-blue" style="width:25%;"> &lt;25%</div></div><div class="bar-value" style="color:var(--red);">Not met</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Full pipeline — Pratham field scans (235 YOLO crops)</h3>
+      <div class="bar-chart">
+        <div class="bar-row"><div class="bar-label">v1 CER — 98.5%</div><div class="bar-track"><div class="bar-fill bar-fill-red" style="width:98.5%;font-size:0.7rem;">98.5%</div></div><div class="bar-value">v1 baseline</div></div>
+        <div class="bar-row"><div class="bar-label">v2 CER — 71.3%</div><div class="bar-track"><div class="bar-fill bar-fill-amber" style="width:71.3%;">71.3%</div></div><div class="bar-value">−27pp abs.</div></div>
+      </div>
+      <p style="font-size:0.78rem;color:var(--red);margin-top:0.5rem;"><strong>Field scenario: HITL mandatory.</strong> Word-exact accuracy ~12%, well below the ~70% threshold for unattended deployment. Large absolute improvement but the baseline was near-random so the relative improvement story is misleading without stating the absolute level.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 19: ATTRIBUTION — EVAL PAGES ===== -->
+<section class="slide" id="s19">
+  <div class="slide-inner">
+    <div class="slide-number">19 / 25</div>
+    <div class="slide-title">Per-technique Attribution — <span>Eval Pages 31–41</span></div>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:1rem;">Total: 51.78% → 36.4% = <strong>−15.4pp</strong>. Bars show approximate ablation contribution; interactions are non-linear so bars do not sum exactly. Source: <code>data/results/v2/per_stage_attribution.json</code></p>
+    <div class="bar-chart">
+      <div class="bar-row">
+        <div class="bar-label">YOLO retrain / matra</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-amber" style="width:60%;">−5.2pp</div></div>
+        <div class="bar-value">−5.2pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Box merge + reading order</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-amber" style="width:44%;">−3.8pp</div></div>
+        <div class="bar-value">−3.8pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">TrOCR domain mixin</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-purple" style="width:30%;">−2.6pp</div></div>
+        <div class="bar-value">−2.6pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Unicode NFC normalization</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-green" style="width:20%;">−1.7pp</div></div>
+        <div class="bar-value">−1.7pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Char 3-gram LM rescore</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-blue" style="width:16%;">−1.4pp</div></div>
+        <div class="bar-value">−1.4pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">ASER dictionary (~4.2k)</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-blue" style="width:8%;">−0.7</div></div>
+        <div class="bar-value">−0.7pp</div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:0.5rem;">
+      <div class="card card-accent">
+        <h3>Top lever: YOLO detection</h3>
+        <p>The single biggest improvement came from better detection — not better recognition. This validates the hypothesis that crop quality was the dominant bottleneck for eval-page CER, not TrOCR weights per se.</p>
+      </div>
+      <div class="card card-green">
+        <h3>Cheapest win: Unicode NFC</h3>
+        <p>−1.7pp for a single Python call. No training required. Canonical Unicode normalization removes encoding inconsistencies between the TrOCR tokenizer and ground-truth labels — a pre-processing fix that costs almost nothing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 20: ATTRIBUTION — PRATHAM FIELD ===== -->
+<section class="slide" id="s20">
+  <div class="slide-inner">
+    <div class="slide-number">20 / 25</div>
+    <div class="slide-title">Per-technique Attribution — <span>Pratham Field Scans</span></div>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:1rem;">Total: 98.54% → 71.3% = <strong>−27.2pp</strong>. Note: one technique <strong>regressed</strong> CER (LM rescoring — shown in red). Source: <code>data/results/v2/per_stage_attribution.json</code></p>
+    <div class="bar-chart">
+      <div class="bar-row">
+        <div class="bar-label">Domain adaptation (240)</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-green" style="width:80%;">−16.4pp</div></div>
+        <div class="bar-value">−16.4pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">YOLO + field augment</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-amber" style="width:33%;">−6.8pp</div></div>
+        <div class="bar-value">−6.8pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Box merge + reading order</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-amber" style="width:10%;">−2.1pp</div></div>
+        <div class="bar-value">−2.1pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">NFC + dictionary</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-blue" style="width:9%;">−1.9pp</div></div>
+        <div class="bar-value">−1.9pp</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label" style="color:var(--red);">LM rescoring (REGRESSION)</div>
+        <div class="bar-track" style="background:rgba(220,38,38,0.1);">
+          <div class="bar-fill bar-fill-red" style="width:3%;">+0.6</div>
+        </div>
+        <div class="bar-value" style="color:var(--red);">+0.6pp</div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:0.5rem;">
+      <div class="card card-green">
+        <h3>Dominant lever: domain adaptation</h3>
+        <p>−16.4pp from 240 Pratham-domain crops. The field distribution is so different from HindiSeg that even a small amount of in-domain data (curated from the portal history) delivers the largest single improvement in the project. Larger annotation sets would unlock more.</p>
+      </div>
+      <div class="card card-red">
+        <h3>LM regression: why it happened</h3>
+        <p>The char 3-gram LM was trained on HindiSeg transcripts. Field handwriting uses different vocabulary and spelling conventions. When a plausible alternative from the decoder beam scores higher in the HindiSeg-biased LM, it replaces a correct field prediction with a wrong one. Net effect: <strong>+0.6pp CER</strong>. Shipped <code>LM_ENABLE_FIELD=false</code> by default. See <code>data/results/v2/lm_rescore_ablation.csv</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 21: PER-DOC DEEP DIVE ===== -->
+<section class="slide" id="s21">
+  <div class="slide-inner">
+    <div class="slide-number">21 / 25</div>
+    <div class="slide-title">Per-document <span>Deep Dive</span> — Eval Pages 31–41</div>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:0.75rem;">Source: <code>data/results/v2/end_to_end_eval_pages.csv</code>. v1 numbers from <code>docs/TROCR_YOLO_DETAILED_EVALUATION_REPORT.md</code>. Note: folder 37 (most erratic writer) remains the hardest bucket even after all v2 improvements.</p>
+    <table>
+      <tr><th>Folder</th><th>N crops</th><th>Writer style</th><th>v1 CER</th><th>v2 CER</th><th>Delta (pp)</th><th>Met &lt;25%?</th></tr>
+      <tr><td>38</td><td>13</td><td>Neat block print</td><td style="color:var(--accent);">21.2%</td><td style="color:var(--green);">13.6%</td><td>−7.6</td><td style="color:var(--green);">Yes</td></tr>
+      <tr><td>35</td><td>12</td><td>Printed style</td><td>30.3%</td><td style="color:var(--green);">19.5%</td><td>−10.8</td><td style="color:var(--green);">Yes</td></tr>
+      <tr><td>32</td><td>11</td><td>Cursive-heavy</td><td>38.6%</td><td>25.4%</td><td>−13.2</td><td style="color:var(--accent);">Border</td></tr>
+      <tr><td>33</td><td>11</td><td>Stylised cursive</td><td>41.1%</td><td>28.1%</td><td>−13.0</td><td style="color:var(--red);">No</td></tr>
+      <tr><td>31</td><td>13</td><td>Standard + cursive</td><td>49.5%</td><td>30.7%</td><td>−18.8</td><td style="color:var(--red);">No</td></tr>
+      <tr><td>34</td><td>13</td><td>Faded ink</td><td>52.5%</td><td>35.7%</td><td>−16.9</td><td style="color:var(--red);">No</td></tr>
+      <tr><td>39</td><td>3</td><td>Block print</td><td>54.2%</td><td>35.0%</td><td>−19.2</td><td style="color:var(--red);">No</td></tr>
+      <tr><td>36</td><td>13</td><td>Mixed styles</td><td>55.6%</td><td>38.2%</td><td>−17.4</td><td style="color:var(--red);">No</td></tr>
+      <tr><td>40</td><td>11</td><td>Unconventional</td><td>69.6%</td><td>44.5%</td><td>−25.1</td><td style="color:var(--red);">No</td></tr>
+      <tr><td>41</td><td>6</td><td>Damaged / partial</td><td>78.2%</td><td>49.3%</td><td>−28.9</td><td style="color:var(--red);">No</td></tr>
+      <tr><td style="color:var(--red);font-weight:700;">37</td><td>15</td><td style="color:var(--red);">Erratic / unconventional</td><td style="color:var(--red);">100%</td><td style="color:var(--red);">78.0%</td><td>−22.0</td><td style="color:var(--red);">No</td></tr>
+      <tr style="font-weight:700;"><td>Weighted avg</td><td>121</td><td>—</td><td>51.78%</td><td style="color:var(--accent);">36.4%</td><td>−15.4</td><td>2/11 only</td></tr>
+    </table>
+    <p style="font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">The sub-25% target is met only for folders 38 and 35 — the two cleanest, most print-like writer styles. Folders 37, 41, 40 remain problem zones and warrant targeted data collection.</p>
+  </div>
+</section>
+
+<!-- ===== SLIDE 22: FAILURE MODES ===== -->
+<section class="slide" id="s22">
+  <div class="slide-inner">
+    <div class="slide-number">22 / 25</div>
+    <div class="slide-title">Failure Modes — <span>What Didn't Work</span></div>
+    <div class="grid-2">
+      <div>
+        <div class="card card-red" style="padding:0.9rem;">
+          <h3 style="font-size:0.88rem;">1. LM rescoring on field regressed CER by 0.6pp</h3>
+          <p>HindiSeg corpus skew. Shipped disabled for field (<code>LM_ENABLE_FIELD=false</code>). v3: rebuild LM on in-domain transcripts or remove entirely.</p>
+        </div>
+        <div class="card card-red" style="padding:0.9rem;margin-top:0.5rem;">
+          <h3 style="font-size:0.88rem;">2. Annotation kappa 0.62 — below 0.8 target</h3>
+          <p>Only 180/881 portal entries had dual annotations. Gold set: 140 rows vs 400 hoped. Limits domain adaptation data quality.</p>
+        </div>
+        <div class="card card-red" style="padding:0.9rem;margin-top:0.5rem;">
+          <h3 style="font-size:0.88rem;">3. Pratham field word-exact ~12% — not production-ready</h3>
+          <p>HITL mandatory for all field uploads. Not a feature — a deployment constraint. Target was &gt;40% for unattended use.</p>
+        </div>
+        <div class="card card-red" style="padding:0.9rem;margin-top:0.5rem;">
+          <h3 style="font-size:0.88rem;">4. YOLO over-merge ~3% dense rows</h3>
+          <p>Matra-aware merge gap fixed at 8px. Over-merges adjacent words when horizontal gap is below threshold. v3 fix: per-row dynamic gap from spacing histogram.</p>
+        </div>
+        <div class="card card-red" style="padding:0.9rem;margin-top:0.5rem;">
+          <h3 style="font-size:0.88rem;">5. TrOCR HindiSeg gain modest (1pp)</h3>
+          <p>Checkpoint step 38k was already near saturation. Curriculum + augmentation gave less than the 3pp hoped for. More data would be needed to improve further on this distribution.</p>
+        </div>
+        <div class="card card-red" style="padding:0.9rem;margin-top:0.5rem;">
+          <h3 style="font-size:0.88rem;">6. Monitoring uncalibrated; HITL 3× not 8×</h3>
+          <p>SLOs are placeholders. HITL throughput bottleneck is per-word review UX latency, not model speed.</p>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.5rem;">Folder 37 — hardest writer group; zero exact matches even after v2:</p>
+        <img src="sample-fullpage-37.jpg" alt="Erratic page 37" style="width:100%;border-radius:10px;border:1px solid var(--red);margin-bottom:0.8rem;"/>
+        <div style="display:flex;gap:0.5rem;">
+          <div class="sample-crop" style="border-color:var(--red);">
+            <img src="crop-37-000.jpg" alt=""/>
+            <div class="crop-pred pred-wrong">सूद ✗</div>
+            <div class="crop-gt">GT: शब्द</div>
+          </div>
+          <div class="sample-crop" style="border-color:var(--red);">
+            <img src="crop-37-003.jpg" alt=""/>
+            <div class="crop-pred pred-wrong">न्यार्वज ✗</div>
+            <div class="crop-gt">GT: न्यायालय</div>
+          </div>
+          <div class="sample-crop" style="border-color:var(--green);">
+            <img src="crop-38-000.jpg" alt=""/>
+            <div class="crop-pred pred-correct">मकान ✓</div>
+            <div class="crop-gt">Folder 38</div>
+          </div>
+          <div class="sample-crop" style="border-color:var(--green);">
+            <img src="crop-38-005.jpg" alt=""/>
+            <div class="crop-pred pred-correct">लिखना ✓</div>
+            <div class="crop-gt">Folder 38</div>
+          </div>
+        </div>
+        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.5rem;">Folder 38 (neat print) shows what good looks like — exact match even with YOLO crops. Folder 37 (erratic) remains a complete failure, motivating targeted HITL + data collection rather than model-only fixes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 23: DEPLOYMENT & ETHICS ===== -->
+<section class="slide" id="s23">
+  <div class="slide-inner">
+    <div class="slide-number">23 / 25</div>
+    <div class="slide-title">Deployment &amp; <span>Ethics</span></div>
+    <div class="grid-2">
+      <div>
+        <div class="card card-accent">
+          <h3>Deployment constraints (v2)</h3>
+          <ul>
+            <li><strong>HITL is mandatory for field uploads</strong> — word-exact accuracy ~12% means direct grading from model output would be harmful to students</li>
+            <li>LM rescoring <strong>off by default</strong> for field; any change requires re-running ablation on field data</li>
+            <li>Monitoring SLOs need Pratham ops sign-off before production alerting</li>
+            <li>v2 model weights not hosted publicly; see <code>models/MODEL_STORAGE.md</code> for EC2 access</li>
+          </ul>
+        </div>
+        <div class="card card-blue" style="margin-top:0.5rem;">
+          <h3>Retraining playbook</h3>
+          <p>Documented in <code>pipeline/playbooks/RETRAINING.md</code>. Triggers for YOLO retrain: IoU audit below 0.72 or new camera/paper template. Triggers for TrOCR: holdout CER above 9% or systematic new-vocabulary confusions.</p>
+        </div>
+        <div class="card" style="margin-top:0.5rem;border-left:4px solid var(--cyan);">
+          <h3>Model card v2</h3>
+          <p>Documented in <code>models/MODEL_CARD_v2.md</code>: intended use, training data, eval results, <strong>known failure modes</strong> (all 6 listed), ethical notes. Follows the Hugging Face model card standard for transparency.</p>
+        </div>
+      </div>
+      <div>
+        <div class="card card-red">
+          <h3>Ethical considerations</h3>
+          <ul>
+            <li><strong>Student data sensitivity:</strong> ASER responses are from rural children. Data must follow Pratham's data-handling agreements — no sharing with third parties, no public release of raw images</li>
+            <li><strong>No automated grading without review:</strong> model errors that reduce a student's score unfairly are worse than slow manual grading. HITL gate is not optional</li>
+            <li><strong>Annotator bias:</strong> 881 rows from a single Ubuntu deployment; kappa 0.62 suggests label noise. Domain adaptation trained on this data inherits annotation inconsistency</li>
+            <li><strong>Script sensitivity:</strong> Devanagari is a sacred script in many Hindu traditions — misrecognition should not reach end-users without review</li>
+          </ul>
+        </div>
+        <div class="card" style="margin-top:0.5rem;border-left:4px solid var(--green);">
+          <h3>What "production-ready" requires</h3>
+          <ul>
+            <li>Field pipeline CER below 50% with HITL coverage (v2: 71.3% — not there yet)</li>
+            <li>Cohen's kappa &gt; 0.8 on gold-set labels for trust in domain-adapt data</li>
+            <li>Live monitoring calibration on real ATM traffic</li>
+            <li>Formal sign-off from Pratham ops team on SLOs</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 24: V3 ROADMAP ===== -->
+<section class="slide" id="s24">
+  <div class="slide-inner">
+    <div class="slide-number">24 / 25</div>
+    <div class="slide-title">v3 <span>Roadmap</span></div>
+    <div class="grid-3">
+      <div>
+        <div class="card card-accent">
+          <h3>Priority 1 — close CER gap on eval pages</h3>
+          <p><strong>Target:</strong> eval-page CER from 36.4% → &lt;25%</p>
+          <ul style="margin-top:0.4rem;">
+            <li>Per-row dynamic merge-gap from spacing histogram (fixes 3% over-merge)</li>
+            <li>More field YOLO training data (expand from 155 pages)</li>
+            <li>Hard-writer data collection (folder 37-style examples)</li>
+            <li>TrOCR augmentation: expand elastic warp and box-jitter for YOLO crop noise</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="card card-blue">
+          <h3>Priority 2 — field deployment readiness</h3>
+          <p><strong>Target:</strong> field word-exact &gt;40% to reduce HITL load</p>
+          <ul style="margin-top:0.4rem;">
+            <li>Expand Pratham domain-adapt set (240 → 1,000+ crops)</li>
+            <li>Build in-domain char LM on field transcripts (remove HindiSeg bias)</li>
+            <li>Dual-annotate 400+ portal rows to hit kappa &gt;0.8 gold standard</li>
+            <li>Calibrate monitoring SLOs on real ATM traffic (Pratham integration sign-off)</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="card card-purple">
+          <h3>Priority 3 — HITL UX + extensions</h3>
+          <p><strong>Target:</strong> HITL throughput 3× → 8× manual</p>
+          <ul style="margin-top:0.4rem;">
+            <li>Batch review mode in <code>pipeline/hitl/review_app.py</code> (vs word-by-word)</li>
+            <li>Keyboard-first review flow for fast annotators</li>
+            <li>Multilingual: swap Hindi RoBERTa decoder for Tamil/Bengali/Gujarati equivalents (YOLO is already language-agnostic)</li>
+            <li>End-to-end model (single unified architecture replacing YOLO+TrOCR)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0.75rem;border-top:3px solid var(--green);">
+      <h3>Expected impact of v3 if all three priorities land</h3>
+      <div class="stat-row" style="margin:0.5rem 0;">
+        <div class="stat-box"><div class="stat-value" style="font-size:1.3rem;">&lt;25%</div><div class="stat-label">Eval-page pipeline CER</div><div class="stat-sub">from 36.4%</div></div>
+        <div class="stat-box"><div class="stat-value" style="font-size:1.3rem;">&gt;40%</div><div class="stat-label">Field word-exact</div><div class="stat-sub">from ~12%</div></div>
+        <div class="stat-box"><div class="stat-value" style="font-size:1.3rem;">&gt;0.8</div><div class="stat-label">Gold-set kappa</div><div class="stat-sub">from 0.62</div></div>
+        <div class="stat-box"><div class="stat-value" style="font-size:1.3rem;">8×</div><div class="stat-label">HITL throughput</div><div class="stat-sub">from ~3×</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 25: TEAM + AI DECLARATION ===== -->
+<section class="slide title-slide" id="s25">
+  <div class="devanagari-bg" style="top:8%;right:-4%;">OCR</div>
+  <div style="position:relative;z-index:1;max-width:900px;width:100%;text-align:center;">
+    <div class="slide-number" style="position:static;margin-bottom:1rem;display:block;">25 / 25</div>
+    <h1 style="font-size:2.4rem;margin-bottom:0.5rem;">Thank You</h1>
+    <p class="subtitle" style="margin-bottom:2rem;">Hindi Handwritten Document Recognition — Final Project</p>
+    <div class="team-chips" style="margin-bottom:2rem;">
+      <div class="team-chip"><strong>Harshit AGARWAL</strong> <span>E1509813 · Project liaison, YOLO, pipeline</span></div>
+      <div class="team-chip"><strong>Chitrarath BHATTACHARJEE</strong> <span>E1511452 · TrOCR, evaluation, baselines</span></div>
+      <div class="team-chip"><strong>Jia Hui GAN</strong> <span>E1092587 · Data, annotation, documentation</span></div>
+    </div>
+    <div class="card card-accent" style="max-width:700px;margin:0 auto;text-align:left;">
+      <h3>AI Tool Declaration</h3>
+      <p style="margin-bottom:0.5rem;">In accordance with NUS academic integrity policy, our team declares the use of AI tools in the preparation of this project:</p>
+      <p><strong>Claude (Anthropic):</strong> Used to assist with drafting and structuring documentation (GUIDE.md, COMPLETION_REPORT.md, speaker scripts), code scaffolding review, and presentation content organisation.</p>
+      <p style="margin-top:0.3rem;"><strong>Google Gemini:</strong> Used to source references for existing-tool baseline analysis and related work on Indic OCR.</p>
+      <p style="margin-top:0.5rem;color:var(--accent);font-weight:600;">The team takes full responsibility for the content, methodology, results, and quality of this submission.</p>
+    </div>
+    <p style="margin-top:1.5rem;font-size:0.82rem;color:var(--text-dim);">ISY5004 GC · Intelligent Sensing Systems · NUS Institute of Systems Science · January – May 2026</p>
+  </div>
+</section>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+  lucide.createIcons();
+
+  // Mermaid init
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: { htmlLabels: true, curve: 'basis' },
+    sequence: { actorMargin: 60 },
+    securityLevel: 'loose'
+  });
+
+  // Active nav highlighting on scroll
+  const slides = document.querySelectorAll('.slide');
+  const navLinks = document.querySelectorAll('nav .slides-nav a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const id = entry.target.id;
+        const active = document.querySelector(`nav a[href="#${id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.4 });
+  slides.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

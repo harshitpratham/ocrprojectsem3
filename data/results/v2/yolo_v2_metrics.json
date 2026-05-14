@@ -1,0 +1,10 @@
+{
+  "map50_v1": 0.78,
+  "map50_v2": 0.84,
+  "precision_v2": 0.81,
+  "recall_v2": 0.76,
+  "failure_modes": {
+    "over_merge_dense_rows_pct_estimate": 3.1,
+    "note": "Matra-aware merge gap; see detection/postprocess.py"
+  }
+}

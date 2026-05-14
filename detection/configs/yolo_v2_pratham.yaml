@@ -1,0 +1,61 @@
+# YOLOv8 v2 — Pratham field + HindiSeg-style pages
+# Matra-aware training recipe: stronger small-object emphasis (higher box loss weight),
+# no horizontal flip (Devanagari), scan-quality augmentation for field photos.
+#
+# Update `path` to your local YOLO dataset root before training.
+
+path: ../data/yolo_dataset
+train: images/train
+val: images/val
+test: images/test
+
+nc: 1
+names:
+  0: word
+
+epochs: 80
+batch: 16
+imgsz: 800
+patience: 25
+save_period: 10
+workers: 4
+
+optimizer: AdamW
+lr0: 0.0008
+lrf: 0.01
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 5
+warmup_momentum: 0.8
+warmup_bias_lr: 0.1
+
+fliplr: 0.0
+flipud: 0.0
+degrees: 8.0
+translate: 0.12
+scale: 0.35
+shear: 3.0
+perspective: 0.0002
+mosaic: 0.65
+mixup: 0.0
+copy_paste: 0.0
+
+hsv_h: 0.0
+hsv_s: 0.0
+hsv_v: 0.55
+
+# v2: tighter NMS for matra-heavy rows (reduce merged words); trainer reads iou/conf
+iou: 0.42
+conf: 0.22
+
+# Matra-aware loss emphasis (Ultralytics v8: scale small-object sensitivity via cls/box).
+# Documented in train_yolov8_v2.py — these are passed as overrides where supported.
+box: 10.0
+cls: 0.6
+
+project: runs/detect
+name: hindi_words_v2
+exist_ok: true
+plots: true
+
+model: yolov8s.pt

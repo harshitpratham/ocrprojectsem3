@@ -1,0 +1,13 @@
+transformers==4.41.2
+datasets==2.19.0         # or latest stable
+jiwer
+torch                    # installed separately with proper CUDA
+torchvision              # same as above
+opencv-python
+tokenizers>=0.19.0
+huggingface-hub>=0.23.0
+matplotlib
+evaluate
+#pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#pip install transformers==4.41.2 datasets==2.19.0 jiwer tokenizers>=0.19.0 huggingface-hub>=0.23.0 matplotlib evaluate opencv-python
+#pip install "transformers[torch]"
