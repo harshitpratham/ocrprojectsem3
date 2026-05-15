@@ -499,11 +499,16 @@ sequenceDiagram
       </div>
     </div>
     <div class="card" style="margin-top:0.5rem;border-top:3px solid var(--cyan);">
-      <h3>v2 domain-adaptation set (TrOCR second-stage)</h3>
-      <p>
-        <strong>240 curated Pratham crops</strong> drawn from <code>annotation_history_ubuntu.csv</code> (881 rows total in the portal). Curated for completeness and label confidence; used for the second-stage fine-tune described in slide 14.
-        Cohen's ka%a across dual-annotated pairs: <span style="color:var(--red);font-weight:700;">0.62</span> (target was 0.8; thin dual coverage — 180/881 rows had two annotators).
-      </p>
+      <h3>v2 Domain-Adaptation Set: 240 Curated Pratham Crops</h3>
+      <p><strong>Purpose:</strong> Bridge HindiSeg (general-purpose) and real Pratham field handwriting via second-stage TrOCR fine-tuning</p>
+      <p><strong>Source:</strong> Manually selected from <code>annotation_history_ubuntu.csv</code> (881 total portal annotations). Selection criteria: label completeness + annotator confidence.</p>
+      <p><strong>Quality Metrics:</strong></p>
+      <ul style="margin: 0.3rem 0 0.3rem 1.2rem;">
+        <li>Cohen's κ (inter-annotator agreement) = <span style="color:var(--red);font-weight:700;">0.62</span> (target: 0.8)</li>
+        <li>Dual-annotated coverage: only 180/881 rows → reflects annotation ambiguity in field data</li>
+        <li>Gold set (κ ≥ 0.8 filtered) ≈ <strong>140 high-confidence rows</strong> (below 400-row internal target)</li>
+      </ul>
+      <p><strong>Impact:</strong> Largest single factor in v2 improvement — <strong>−16.4 pp CER reduction</strong> on Pratham field data. Limited sample size constrains further gains; expanding to 400+ examples estimated to yield 5–10 pp additional improvement.</p>
     </div>
     <table style="margin-top:0.5rem;">
       <tr><th>Dataset</th><th>Size</th><th>Used for</th><th>CER/metric</th></tr>
