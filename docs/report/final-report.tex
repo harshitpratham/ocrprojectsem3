@@ -22,8 +22,6 @@
 
 % Packages
 \usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage[margin=1in]{geometry}
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -61,23 +59,17 @@
 \fancyhead{}\fancyfoot{}
 \cfoot{Page \thepage\ of \pageref{LastPage}}
 
-\usepackage{graphicx}
 \usepackage{svg}
 \usepackage{subcaption}
 \usepackage{caption}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
-\usepackage{amsmath, amssymb}
-% TikZ libraries
-\usetikzlibrary{shapes, arrows, positioning, calc, decorations.pathmorphing}
 
 % Tables: control and centering
 \usepackage{tabularx} % flexible column widths
 \usepackage{array} % for >{\centering\arraybackslash}
 \usepackage{enumitem}
-\usepackage[T1]{fontenc}
 \usepackage{float}
 \setlength{\tabcolsep}{3pt} % Tighten inter-column padding a bit so there is more usable width
-\usepackage{multirow}
 
 \title{ \\ \\Group 39 \\ \Hindi Handwritten Document Recognition via Visual Sensing}
 
@@ -115,7 +107,7 @@
 \begin{abstract}
 This report presents a comprehensive analysis of an end-to-end Optical Character Recognition (OCR) pipeline for handwritten Hindi documents. The system combines YOLO-based word detection with TrOCR-based word recognition, supplemented by sophisticated post-processing techniques. Built for Pratham Education Foundation's ASER field surveys, the pipeline automatically digitizes handwritten student assessments written in Devanagari script.
 
-The v2 release demonstrates significant improvements over the baseline: a 29.7\% relative Character Error Rate (CER) reduction on controlled evaluation pages (51.78\% $\to$ 36.4\%) and a 27.6\% relative improvement on real Pratham field documents (98.54\% $\to$ 71.3\%). However, field document performance reveals that human-in-the-loop review remains mandatory for production deployment. The system achieves 84\% mean Average Precision (mAP) on word detection and 7.12\% CER on standardized test sets.
+We have achieved significant improvements over the baseline: a 29.7\% relative Character Error Rate (CER) reduction on controlled evaluation pages (51.78\% $\to$ 36.4\%) and a 27.6\% relative improvement on real Pratham field documents (98.54\% $\to$ 71.3\%). However, field document performance reveals that human-in-the-loop review remains mandatory for production deployment. The system achieves 84\% mean Average Precision (mAP) on word detection and 7.12\% CER on standardized test sets.
 
 This report provides deep technical analysis of the architecture, datasets, training methodologies, results interpretation, and deployment constraints. We discuss failure modes, attribution analysis, and honest assessment of what was achieved versus internal targets.
 
@@ -134,14 +126,14 @@ Human-in-the-Loop, Character Error Rate, End-to-End Pipeline
 
 \fancyhead[C]{Group 39: Hindi Handwritten Document Recognition via Visual Sensing}
 % ============================================================================
-\chapter{Introduction}
+\section{Introduction}
 % ============================================================================
 
-\section{Motivation and Real-World Context}
+\subsection{Motivation and Real-World Context}
 
-The Pratham Education Foundation operates ASER (Annual Status of Education Report), the world's largest citizen-led rural learning assessment. Every year, tens of thousands of field workers collect handwritten student assessment responses across India. These responses are written in Hindi on paper in widely varying handwriting styles.
+The \href{https://www.pratham.org/about/}{Pratham Education Foundation} operates ASER (Annual Status of Education Report), the world's largest citizen-led rural learning assessment. Every year, tens of thousands of field workers collect handwritten student assessment responses across India. These responses are written in Hindi on paper in widely varying handwriting styles.
 
-\subsection{The Bottleneck}
+\subsubsection{The Bottleneck}
 
 Manual transcription of handwritten responses is a critical bottleneck:
 \begin{itemize}
@@ -151,7 +143,7 @@ Manual transcription of handwritten responses is a critical bottleneck:
     \item \textbf{Delay:} Manual transcription delays educational interventions and policy decisions
 \end{itemize}
 
-\subsection{Why Existing Tools Fail}
+\subsubsection{Why Existing Tools Fail}
 
 Commercial OCR solutions (Tesseract, Google Vision API, Amazon Textract) fail on this task because:
 
@@ -165,7 +157,50 @@ Commercial OCR solutions (Tesseract, Google Vision API, Amazon Textract) fail on
     \item \textbf{Script Complexity:} Devanagari has 14 vowels, 33 consonants, and complex ligature rules. Matras attach dynamically to base characters.
 \end{enumerate}
 
-\section{Project Objectives}
+\begin{figure}[h!]
+	\centering
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{Matra_problem.png}
+		\caption{Matras attached above, below, and around base consonants}
+	\end{minipage}\hfill
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{Fusion_problem.png}
+		\caption{Conjuncts fuse multiple consonants}
+	\end{minipage}
+\end{figure}
+
+\begin{table}[H]
+	\begin{tabular}{
+		| >{\raggedright\arraybackslash}m{3.5cm}
+		| >{\raggedright\arraybackslash}m{4cm}
+		| >{\raggedright\arraybackslash}m{7cm}|
+		}
+		\hline
+		\textbf{Solution}   & \textbf{Cost (USD)} & \textbf{Accuracy on Handwritten Hindi}\\
+		\hline
+				    		
+		% -------- Row 1 --------
+		Tesseract   & Free  & est. 0\% (poor Devanagari support)        
+		\\ \hline	    		 
+		% -------- Row 2 --------
+		Google Cloud Vision & \$1.50 - \$6.00 per image & est. 5\% (English-centric)                
+		\\ \hline		
+		% -------- Row 3 --------
+		Amazon Textract  & \$0.015 per page & est. 3\% (English-centric)                
+		\\ \hline          
+		% -------- Row 4 --------
+		Claude 3.5 Opus  & \$0.003 per image  & est. 15\% (zero-shot, expensive at scale) 
+		\\ \hline
+		% -------- Row 5 --------
+		Claude 3.5 Haiku & \$0.00008 per image  & 0\% (complete failure)                    
+		\\ \hline
+	\end{tabular}
+	\caption{Comparison table between various commercial solutions}
+\end{table}
+
+\subsection{Project Objectives}
 
 This project addresses these challenges by:
 \begin{enumerate}
@@ -176,26 +211,26 @@ This project addresses these challenges by:
     \item Establishing an \textbf{honest evaluation framework} that acknowledges failure modes and deployment constraints
 \end{enumerate}
 
-\section{Report Structure}
+\subsection{Report Structure}
 
 This report is organized as follows:
 \begin{itemize}
-    \item \textbf{Chapter 2:} Technical architecture and pipeline design
-    \item \textbf{Chapter 3:} Dataset descriptions and curation methodology
-    \item \textbf{Chapter 4:} YOLO-based word detection (Stage 1)
-    \item \textbf{Chapter 5:} TrOCR-based word recognition (Stage 2)
-    \item \textbf{Chapter 6:} Post-processing techniques (Stage 3)
-    \item \textbf{Chapter 7:} Results and evaluation methodology
-    \item \textbf{Chapter 8:} Attribution analysis: what each technique contributed
-    \item \textbf{Chapter 9:} Failure modes and deployment constraints
-    \item \textbf{Chapter 10:} Conclusions and future work
+    \item \textbf{Section 2:} Technical architecture and pipeline design
+    \item \textbf{Section 3:} Dataset descriptions and curation methodology
+    \item \textbf{Section 4:} YOLO-based word detection (Stage 1)
+    \item \textbf{Section 5:} TrOCR-based word recognition (Stage 2)
+    \item \textbf{Section 6:} Post-processing techniques (Stage 3)
+    \item \textbf{Section 7:} Results and evaluation methodology
+    \item \textbf{Section 8:} Attribution analysis: what each technique contributed
+    \item \textbf{Section 9:} Failure modes and deployment constraints
+    \item \textbf{Section 10:} Conclusions and future work
 \end{itemize}
-
+\newpage
 % ============================================================================
-\chapter{System Architecture}
+\section{System Architecture}
 % ============================================================================
 
-\section{End-to-End Pipeline Design}
+\subsection{End-to-End Pipeline Design}
 
 The pipeline decomposes the OCR problem into four sequential stages:
 
@@ -225,7 +260,7 @@ $\downarrow$
 \end{minipage}}
 \end{center}
 
-\subsection{Stage 1: Word Detection (YOLO)}
+\subsubsection{Stage 1: Word Detection (YOLO)}
 
 YOLOv8 (You Only Look Once v8) is trained to detect the bounding box of each word in a document image. This is a \textbf{language-agnostic task} — the model responds to visual word-shaped blobs regardless of script or content.
 
@@ -238,7 +273,7 @@ YOLOv8 (You Only Look Once v8) is trained to detect the bounding box of each wor
     \item \textbf{Confidence:} Can be thresholded (default: 0.8)
 \end{itemize}
 
-\subsection{Stage 2: Word Recognition (TrOCR)}
+\subsubsection{Stage 2: Word Recognition (TrOCR)}
 
 TrOCR (Transformer-based Optical Character Recognition) is a Vision Encoder-Decoder model that converts individual word image crops into Unicode Hindi text.
 
@@ -251,7 +286,7 @@ TrOCR (Transformer-based Optical Character Recognition) is a Vision Encoder-Deco
     \item \textbf{Output:} Unicode Hindi text (variable length, max 128 tokens)
 \end{itemize}
 
-\subsection{Stage 3 \& 4: Post-Processing}
+\subsubsection{Stage 3 \& 4: Post-Processing}
 
 Text post-processing applies several transformations:
 \begin{enumerate}
@@ -261,9 +296,9 @@ Text post-processing applies several transformations:
     \item \textbf{Reading Order:} Sorts words by geometric position (top-to-bottom, left-to-right)
 \end{enumerate}
 
-\section{Design Decisions and Rationale}
+\subsection{Design Decisions and Rationale}
 
-\subsection{Why Decouple Detection and Recognition?}
+\subsubsection{Why Decouple Detection and Recognition?}
 
 The two-stage approach (detect then recognize) is superior to end-to-end models because:
 
@@ -283,7 +318,7 @@ The two-stage approach (detect then recognize) is superior to end-to-end models 
     \caption{Comparison of decoupled vs. end-to-end pipeline design.}
 \end{table}
 
-\subsection{Model Selection Rationale}
+\subsubsection{Model Selection Rationale}
 
 \textbf{Why YOLOv8?}
 \begin{itemize}
@@ -300,12 +335,12 @@ The two-stage approach (detect then recognize) is superior to end-to-end models 
     \item No character-level alignment needed (unlike older OCR approaches)
     \item Pre-trained weights reduce data requirements
 \end{itemize}
-
+\newpage
 % ============================================================================
-\chapter{Datasets and Data Curation}
+\section{Datasets and Data Curation}
 % ============================================================================
 
-\section{Dataset Overview}
+\subsection{Dataset Overview}
 
 The project uses three distinct datasets, each serving different purposes:
 
@@ -323,9 +358,9 @@ The project uses three distinct datasets, each serving different purposes:
     \caption{Summary of datasets used in the project.}
 \end{table}
 
-\section{HindiSeg Dataset}
+\subsection{HindiSeg Dataset}
 
-\subsection{Source and Characteristics}
+\subsubsection{Source and Characteristics}
 
 HindiSeg is the IIIT-H (International Institute of Information Technology, Hyderabad) Indic Handwriting Dataset, specifically the Hindi subset. This is a publicly available benchmark dataset.
 
@@ -338,7 +373,7 @@ HindiSeg is the IIIT-H (International Institute of Information Technology, Hyder
     \item \textbf{Annotation:} Human-transcribed Unicode labels
 \end{itemize}
 
-\subsection{Data Split}
+\subsubsection{Data Split}
 
 \begin{table}[h]
     \centering
@@ -355,7 +390,7 @@ HindiSeg is the IIIT-H (International Institute of Information Technology, Hyder
     \caption{HindiSeg train/val/test split distribution.}
 \end{table}
 
-\subsection{Vocabulary}
+\subsubsection{Vocabulary}
 
 The HindiSeg dataset contains 11,029 unique Hindi words. The vocabulary is diverse and covers:
 \begin{itemize}
@@ -364,9 +399,9 @@ The HindiSeg dataset contains 11,029 unique Hindi words. The vocabulary is diver
     \item Words from multiple domains (literature, science, etc.)
 \end{itemize}
 
-\section{Pratham Field Dataset}
+\subsection{Pratham Field Dataset}
 
-\subsection{Annotation Methodology}
+\subsubsection{Annotation Methodology}
 
 Field data was collected using a Streamlit-based multi-user annotation tool. The tool supports:
 
@@ -379,7 +414,7 @@ Field data was collected using a Streamlit-based multi-user annotation tool. The
 
 The annotation tool architecture consists of: (1) PostgreSQL Database for storing annotations, (2) Streamlit Annotation App for user interface, and (3) CSV/JSON Export for release artifacts.
 
-\subsection{Annotation Quality}
+\subsubsection{Annotation Quality}
 
 Dual annotation was performed on a subset to estimate quality:
 \begin{itemize}
@@ -389,7 +424,7 @@ Dual annotation was performed on a subset to estimate quality:
     \item \textbf{Gold set:} Approximately 140 high-confidence rows suitable for domain adaptation
 \end{itemize}
 
-\subsection{Data Characteristics}
+\subsubsection{Data Characteristics}
 
 Pratham field data spans handwriting quality across the distribution:
 
@@ -416,7 +451,7 @@ Pratham field data spans handwriting quality across the distribution:
     \caption{Pratham evaluation set (folders 31-41) with handwriting quality descriptions.}
 \end{table}
 
-\section{Domain-Specific Adaptation Data}
+\subsection{Domain-Specific Adaptation Data}
 
 For v2, we selected 240 Pratham-annotated word crops from portal history for domain adaptation. These samples were:
 \begin{itemize}
@@ -426,12 +461,12 @@ For v2, we selected 240 Pratham-annotated word crops from portal history for dom
 \end{itemize}
 
 This limited domain mix-in helped the model adapt to field-specific handwriting patterns while maintaining generalization on HindiSeg.
-
+\newpage
 % ============================================================================
-\chapter{Stage 1: YOLO-Based Word Detection}
+\section{Stage 1: YOLO-Based Word Detection}
 % ============================================================================
 
-\section{YOLO Architecture and Fine-Tuning}
+\subsection{YOLO Architecture and Fine-Tuning}
 
 YOLOv8 small (YOLOv8s) was selected as the backbone. The model architecture consists of:
 \begin{itemize}
@@ -441,7 +476,7 @@ YOLOv8 small (YOLOv8s) was selected as the backbone. The model architecture cons
     \item \textbf{Parameters:} $\sim$11.2M parameters (small variant)
 \end{itemize}
 
-\subsection{Training Configuration (v2)}
+\subsubsection{Training Configuration (v2)}
 
 \begin{table}[h]
     \centering
@@ -462,7 +497,7 @@ YOLOv8 small (YOLOv8s) was selected as the backbone. The model architecture cons
     \caption{YOLOv8 v2 training hyperparameters.}
 \end{table}
 
-\subsection{Matra-Aware Loss Weighting}
+\subsubsection{Matra-Aware Loss Weighting}
 
 A key v2 improvement was matra-aware emphasis in the loss function. Matras (diacritical marks) are small features that YOLO might miss. To address this:
 
@@ -474,9 +509,9 @@ A key v2 improvement was matra-aware emphasis in the loss function. Matras (diac
 
 This modification improved detection of word boundaries where matras cluster, a common scenario in Hindi text.
 
-\section{Detection Results}
+\subsection{Detection Results}
 
-\subsection{Performance Metrics}
+\subsubsection{Performance Metrics}
 
 \begin{table}[h]
     \centering
@@ -495,7 +530,7 @@ This modification improved detection of word boundaries where matras cluster, a 
 
 The 7.7\% relative improvement in mAP@50 represents a substantial gain in detection quality, particularly for challenging Pratham field images.
 
-\subsection{Box Merging Post-Processing}
+\subsubsection{Box Merging Post-Processing}
 
 After YOLO detection, boxes are post-processed to handle dense text layouts:
 
@@ -515,12 +550,12 @@ After YOLO detection, boxes are post-processed to handle dense text layouts:
 \end{algorithm}
 
 The box merge heuristic balances detection sensitivity with false-positive reduction. However, audit revealed over-merging in $\sim$3\% of dense rows.
-
+\newpage
 % ============================================================================
-\chapter{Stage 2: TrOCR-Based Word Recognition}
+\section{Stage 2: TrOCR-Based Word Recognition}
 % ============================================================================
 
-\section{TrOCR Architecture}
+\subsection{TrOCR Architecture}
 
 TrOCR is a Vision Encoder-Decoder model designed for OCR tasks. The architecture consists of:
 
@@ -532,7 +567,7 @@ $\rightarrow$ RoBERTa Decoder (Hindi) $\rightarrow$ Output Unicode (variable len
 \end{minipage}}
 \end{center}
 
-\subsection{Encoder Component}
+\subsubsection{Encoder Component}
 
 \textbf{Vision Transformer (ViT-B/16-224-in21k):}
 \begin{itemize}
@@ -545,7 +580,7 @@ $\rightarrow$ RoBERTa Decoder (Hindi) $\rightarrow$ Output Unicode (variable len
 
 The ViT extracts visual features by treating the image as a sequence of non-overlapping patches, enabling transformer self-attention over the entire image.
 
-\subsection{Decoder Component}
+\subsubsection{Decoder Component}
 
 \textbf{Hindi RoBERTa (flax-community/roberta-hindi):}
 \begin{itemize}
@@ -557,9 +592,9 @@ The ViT extracts visual features by treating the image as a sequence of non-over
 
 The Hindi RoBERTa decoder provides language understanding in Hindi and handles variable-length output sequences (up to 128 tokens).
 
-\section{Training Procedure}
+\subsection{Training Procedure}
 
-\subsection{v1 Training (HindiSeg only)}
+\subsubsection{v1 Training (HindiSeg only)}
 
 \begin{table}[h]
     \centering
@@ -580,7 +615,7 @@ The Hindi RoBERTa decoder provides language understanding in Hindi and handles v
     \caption{v1 TrOCR training configuration.}
 \end{table}
 
-\subsection{v2 Training (Domain Adaptation)}
+\subsubsection{v2 Training (Domain Adaptation)}
 
 v2 added a second stage of fine-tuning on domain-specific data:
 
@@ -595,7 +630,7 @@ v2 added a second stage of fine-tuning on domain-specific data:
     \end{itemize}
 \end{enumerate}
 
-\subsection{Data Augmentation}
+\subsubsection{Data Augmentation}
 
 Augmentations were applied to training images to improve robustness:
 
@@ -617,9 +652,9 @@ transforms.Compose([
 
 These augmentations simulate real-world variability in scanned documents (rotation, ink degradation, blur).
 
-\section{Recognition Results}
+\subsection{Recognition Results}
 
-\subsection{Character Error Rate (CER)}
+\subsubsection{Character Error Rate (CER)}
 
 CER is the standard metric for OCR evaluation:
 
@@ -640,13 +675,13 @@ where:
         \textbf{Evaluation Set} & \textbf{v1 CER} & \textbf{v2 CER} \\
         \midrule
         HindiSeg test & 8.17\% & 7.12\% \\
-        Improvement & — & $-$1.05 pp ($-$12.9\% relative) \\
+        Improvement & — & $-$1.05 \% ($-$12.9\% relative) \\
         \bottomrule
     \end{tabular}
     \caption{TrOCR recognition performance on standardized test set.}
 \end{table}
 
-\subsection{Saturation Analysis}
+\subsubsection{Saturation Analysis}
 
 The modest improvement on HindiSeg (7.12\% CER) suggests the checkpoint is approaching saturation on this dataset. Further gains would likely require:
 \begin{itemize}
@@ -656,12 +691,12 @@ The modest improvement on HindiSeg (7.12\% CER) suggests the checkpoint is appro
 \end{itemize}
 
 However, improvements on field data (discussed next) are substantial, indicating domain adaptation is the key lever.
-
+\newpage
 % ============================================================================
-\chapter{Stage 3: Post-Processing Techniques}
+\section{Stage 3: Post-Processing Techniques}
 % ============================================================================
 
-\section{Unicode Normalization}
+\subsection{Unicode Normalization}
 
 Devanagari Unicode has multiple representations for the same visual character. TrOCR sometimes outputs non-canonical forms. NFC (Canonical Composition) normalization ensures consistency:
 
@@ -672,9 +707,9 @@ def normalize_unicode(text, form="NFC"):
     return unicodedata.normalize(form, text.strip())
 \end{lstlisting}
 
-NFC normalization contributed $-$1.7 pp CER improvement on evaluation pages.
+NFC normalization contributed $-$1.7 \% CER improvement on evaluation pages.
 
-\section{Language Model Rescoring}
+\subsubsection{Language Model Rescoring}
 
 An optional character 3-gram language model reranks TrOCR outputs. The LM is trained on HindiSeg word vocabulary:
 
@@ -682,7 +717,7 @@ An optional character 3-gram language model reranks TrOCR outputs. The LM is tra
 
 where $c_i$ are characters.
 
-\subsection{Implementation}
+\subsubsection{Implementation}
 
 \begin{lstlisting}[caption=LM rescoring algorithm]
 def lm_rescore(trocr_output, lm_scores):
@@ -692,7 +727,7 @@ def lm_rescore(trocr_output, lm_scores):
     return max(scored, key=lambda x: x[1])[0]
 \end{lstlisting}
 
-\subsection{LM Performance Analysis}
+\subsubsection{LM Performance Analysis}
 
 \begin{table}[h]
     \centering
@@ -709,7 +744,7 @@ def lm_rescore(trocr_output, lm_scores):
 
 The LM is HindiSeg-skewed, helping on dataset-like text but regressing on field vocabulary. \textbf{Solution:} LM is disabled by default for field deployment (\texttt{LM\_ENABLE\_FIELD=false} in v2 pipeline).
 
-\section{Dictionary Constraint}
+\subsubsection{Dictionary Constraint}
 
 An ASER vocabulary dictionary of approximately 4,200 words constrains output during post-processing. When TrOCR predicts a word outside this vocabulary:
 
@@ -720,9 +755,9 @@ An ASER vocabulary dictionary of approximately 4,200 words constrains output dur
     \item Return closest dictionary word
 \end{enumerate}
 
-Dictionary constraint contributed $-$0.7 pp CER on evaluation pages, providing modest improvement while enforcing domain plausibility.
+Dictionary constraint contributed $-$0.7 \% CER on evaluation pages, providing modest improvement while enforcing domain plausibility.
 
-\section{Reading Order Correction}
+\subsubsection{Reading Order Correction}
 
 Final output must preserve document reading order. The algorithm sorts words by geometric position:
 
@@ -740,15 +775,16 @@ Final output must preserve document reading order. The algorithm sorts words by 
     \end{algorithmic}
 \end{algorithm}
 
-Reading order correction and box merging together contributed $-$3.8 pp CER by handling dense matra rows correctly.
+Reading order correction and box merging together contributed $-$3.8 \% CER by handling dense matra rows correctly.
 
+\newpage
 % ============================================================================
-\chapter{Experimental Results and Evaluation}
+\section{Experimental Results and Evaluation}
 % ============================================================================
 
-\section{Evaluation Methodology}
+\subsection{Evaluation Methodology}
 
-\subsection{Datasets Used}
+\subsubsection{Datasets Used}
 
 \begin{enumerate}
     \item \textbf{HindiSeg test:} Standardized benchmark (12,869 word images)
@@ -758,7 +794,7 @@ Reading order correction and box merging together contributed $-$3.8 pp CER by h
 
 Each evaluation set reveals different aspects of system performance.
 
-\subsection{Metrics}
+\subsubsection{Metrics}
 
 \begin{itemize}
     \item \textbf{Character Error Rate (CER):} Primary metric, character-level errors
@@ -767,7 +803,7 @@ Each evaluation set reveals different aspects of system performance.
     \item \textbf{Cohen's kappa:} Inter-annotator agreement on gold set
 \end{itemize}
 
-\section{v1 Baseline Results}
+\subsection{v1 Baseline Results}
 
 \begin{table}[h]
     \centering
@@ -784,9 +820,9 @@ Each evaluation set reveals different aspects of system performance.
     \caption{v1 baseline results across all evaluation sets.}
 \end{table}
 
-\section{v2 Results}
+\subsection{v2 Results}
 
-\subsection{Recognition Improvements}
+\subsubsection{Recognition Improvements}
 
 \begin{table}[h]
     \centering
@@ -794,13 +830,13 @@ Each evaluation set reveals different aspects of system performance.
         \toprule
         \textbf{Setting} & \textbf{v1 CER} & \textbf{v2 CER} & \textbf{Improvement} \\
         \midrule
-        HindiSeg test & 8.17\% & 7.12\% & $-$1.05 pp ($-$12.9\%) \\
+        HindiSeg test & 8.17\% & 7.12\% & $-$1.05 \% ($-$12.9\%) \\
         \bottomrule
     \end{tabular}
     \caption{TrOCR recognition v1 vs v2.}
 \end{table}
 
-\subsection{End-to-End System Results}
+\subsubsection{End-to-End System Results}
 
 \begin{table}[h]
     \centering
@@ -808,14 +844,14 @@ Each evaluation set reveals different aspects of system performance.
         \toprule
         \textbf{Setting} & \textbf{v1 CER} & \textbf{v2 CER} & \textbf{Improvement} \\
         \midrule
-        Eval pages 31-41 & 51.78\% & 36.4\% & $-$15.38 pp ($-$29.7\% relative) \\
-        Pratham field scans & 98.54\% & 71.3\% & $-$27.24 pp ($-$27.6\% relative) \\
+        Eval pages 31-41 & 51.78\% & 36.4\% & $-$15.38\% ($-$29.7\% relative) \\
+        Pratham field scans & 98.54\% & 71.3\% & $-$27.24\% ($-$27.6\% relative) \\
         \bottomrule
     \end{tabular}
     \caption{End-to-end system v1 vs v2.}
 \end{table}
 
-\section{Word-Level Accuracy}
+\subsubsection{Word-Level Accuracy}
 
 Beyond character-level metrics, word-exact match provides a stricter evaluation:
 
@@ -834,7 +870,7 @@ Beyond character-level metrics, word-exact match provides a stricter evaluation:
 
 The 11.8\% word-exact accuracy on field data (v2) shows that while CER improved dramatically, most predictions contain at least one character error. This is why HITL is mandatory.
 
-\section{Detection Metrics}
+\subsection{Detection Metrics}
 
 \begin{table}[h]
     \centering
@@ -850,20 +886,20 @@ The 11.8\% word-exact accuracy on field data (v2) shows that while CER improved 
     \end{tabular}
     \caption{YOLOv8 detection performance v1 vs v2.}
 \end{table}
-
+\newpage
 % ============================================================================
-\chapter{Attribution Analysis: Per-Technique Contribution}
+\section{Attribution Analysis: Per-Technique Contribution}
 % ============================================================================
 
-\section{Evaluation Pages (Controlled Setting)}
+\subsection{Evaluation Pages (Controlled Setting)}
 
-This section breaks down the contribution of each technique to the total $-$15.38 pp CER improvement on evaluation pages 31-41.
+This section breaks down the contribution of each technique to the total $-$15.38\% CER improvement on evaluation pages 31-41.
 
 \begin{table}[h]
     \centering
     \begin{tabular}{lrl}
         \toprule
-        \textbf{Technique} & \textbf{Δ CER (pp est.)} & \textbf{Notes} \\
+        \textbf{Technique} & \textbf{Δ CER (\% est.)} & \textbf{Notes} \\
         \midrule
         YOLO retrain + matra emphasis & $-$5.2 & Best single detection win \\
         Box merge + reading order v2 & $-$3.8 & Handles dense matra rows \\
@@ -878,7 +914,7 @@ This section breaks down the contribution of each technique to the total $-$15.3
     \caption{Per-technique attribution on evaluation pages 31-41.}
 \end{table}
 
-\section{Pratham Field (Real-World Messy Data)}
+\subsection{Pratham Field (Real-World Messy Data)}
 
 On real field scans, domain adaptation becomes the dominant factor:
 
@@ -886,7 +922,7 @@ On real field scans, domain adaptation becomes the dominant factor:
     \centering
     \begin{tabular}{lrl}
         \toprule
-        \textbf{Technique} & \textbf{Δ CER (pp est.)} & \textbf{Notes} \\
+        \textbf{Technique} & \textbf{Δ CER (\% est.)} & \textbf{Notes} \\
         \midrule
         Pratham domain adaptation & $-$16.4 & Largest single lever \\
         YOLO + Pratham augment & $-$6.8 & Closes part of detection gap \\
@@ -900,19 +936,19 @@ On real field scans, domain adaptation becomes the dominant factor:
     \caption{Per-technique attribution on Pratham field data.}
 \end{table}
 
-\section{Key Insight: Domain Adaptation Is Essential}
+\subsection{Key Insight: Domain Adaptation Is Essential}
 
-The 16.4 pp improvement from domain adaptation (the single largest factor) demonstrates that handwritten Hindi OCR cannot rely solely on general-purpose datasets. Real-world ASER data requires specialized training.
+The 16.4\% improvement from domain adaptation (the single largest factor) demonstrates that handwritten Hindi OCR cannot rely solely on general-purpose datasets. Real-world ASER data requires specialized training.
 
 However, only 240 annotated samples were available for adaptation --- a limitation acknowledged in the report and future work.
-
+\newpage
 % ============================================================================
-\chapter{Failure Modes and Deployment Constraints}
+\section{Failure Modes and Deployment Constraints}
 % ============================================================================
 
-\section{Known Failure Modes}
+\subsection{Known Failure Modes}
 
-\subsection{1. Box Over-Merging (Detection)}
+\subsubsection{Failure 1: Box Over-Merging (Detection)}
 
 \textbf{Problem:} In dense text layouts with many matras, the box merge algorithm can incorrectly merge adjacent words.
 
@@ -922,17 +958,17 @@ However, only 240 annotated samples were available for adaptation --- a limitati
 
 \textbf{Mitigation:} NMS threshold was reduced from 0.45 to 0.4 to reduce merging. However, completely eliminating false merges would require geometric learning (not just distance-based heuristics).
 
-\subsection{2. Language Model Degradation on Field Data}
+\subsubsection{Failure 2: Language Model Degradation on Field Data}
 
 \textbf{Problem:} The character 3-gram LM, trained on HindiSeg vocabulary, is skewed toward that distribution. On real field data with different vocabulary, it actually \textit{increases} CER.
 
-\textbf{Evidence:} +0.6 pp regression when LM is enabled on Pratham field.
+\textbf{Evidence:} +0.6\% regression when LM is enabled on Pratham field.
 
 \textbf{Solution:} Set \texttt{LM\_ENABLE\_FIELD=false} in pipeline configuration. LM remains enabled only for dataset-like evaluation pages.
 
 \textbf{Lesson:} Domain-specific post-processing requires domain-specific training data. Cross-domain LMs can hurt.
 
-\subsection{3. Inter-Annotator Agreement (Quality)}
+\subsubsection{Failure 3: Inter-Annotator Agreement (Quality)}
 
 \textbf{Problem:} Dual annotation revealed Cohen's kappa = 0.62, below the 0.8 target. This suggests:
 \begin{itemize}
@@ -945,7 +981,7 @@ However, only 240 annotated samples were available for adaptation --- a limitati
 
 \textbf{Mitigation:} Achieved 0.62 kappa with available resources; further improvement would require more annotators and clearer guidelines.
 
-\subsection{4. Reading Order Failures}
+\subsubsection{Failure 4: Reading Order Failures}
 
 \textbf{Problem:} The reading order algorithm assumes geometric position === visual reading order. This breaks when:
 \begin{itemize}
@@ -956,7 +992,7 @@ However, only 240 annotated samples were available for adaptation --- a limitati
 
 \textbf{Impact:} Words may be output in scrambled order. Evaluation uses \textit{exact} reading order matching, so this is penalized heavily.
 
-\section{Word-Exact Match Accuracy: Why 11.8\% is Critical}
+\subsection{Word-Exact Match Accuracy: Why 11.8\% is Critical}
 
 On Pratham field, word-exact match is only 11.8\% (v2). This seems poor, but it's the key indicator of whether HITL is needed:
 
@@ -976,7 +1012,7 @@ On Pratham field, word-exact match is only 11.8\% (v2). This seems poor, but it'
 
 At 11.8\%, the system is firmly in the HITL category. This is \textbf{not a bug}; it's an \textit{honest assessment} that field deployment requires human review.
 
-\section{Field Performance Analysis}
+\subsection{Field Performance Analysis}
 
 \subsection{Why Field Is Harder Than Evaluation Pages}
 
@@ -987,34 +1023,34 @@ At 11.8\%, the system is firmly in the HITL category. This is \textbf{not a bug}
     \item \textbf{Detection compound error:} One missing/merged box ruins an entire line. Full pages have more opportunity for these errors.
 \end{enumerate}
 
-\subsection{v2 Improvements Are Genuine}
+\subsubsection{v2 Improvements Are Genuine}
 
-Despite challenges, v2's 27.2 pp improvement (98.54\% $\to$ 71.3\% CER) is substantial:
+Despite challenges, v2's 27.2\% improvement (98.54\% $\to$ 71.3\% CER) is substantial:
 \begin{itemize}
     \item Not an artifact of evaluation methodology
     \item Driven by domain adaptation and detection improvements
     \item Moves from completely unusable (98\%) to moderately usable (71\%) with HITL
 \end{itemize}
 
-\section{Deployment Constraints (Non-Negotiable)}
+\subsection{Deployment Constraints (Non-Negotiable)}
 
-\subsection{1. Human-in-the-Loop Is Mandatory}
+\subsubsection{Constraint 1: Human-in-the-Loop Is Mandatory}
 
 Do not use v2 field outputs for high-stakes decisions without human audit. At 11.8\% word-exact accuracy, every word should be reviewed.
 
-\subsection{2. Gold Set Quality Matters}
+\subsubsection{Constraint 2: Gold Set Quality Matters}
 
-Expanding domain adaptation to 400+ carefully annotated examples could improve field CER by an estimated 5-10 pp. Currently limited to 140 high-confidence rows.
+Expanding domain adaptation to 400+ carefully annotated examples could improve field CER by an estimated 5-10\%. Currently limited to 140 high-confidence rows.
 
-\subsection{3. Post-Processing Is Domain-Specific}
+\subsubsection{Constraint 3: Post-Processing Is Domain-Specific}
 
 LM, dictionary, and reading order algorithms are tuned for HindiSeg/evaluation data. Field deployment requires field-specific post-processing tuning.
 
 % ============================================================================
-\chapter{System Integration and Pipeline}
+\section{System Integration and Pipeline}
 % ============================================================================
 
-\section{End-to-End Pipeline (v2)}
+\subsection{End-to-End Pipeline (v2)}
 
 The full pipeline orchestrates all stages and integrates post-processing:
 
@@ -1030,9 +1066,9 @@ The full pipeline orchestrates all stages and integrates post-processing:
     \item Output: Full-page text
 \end{enumerate}
 
-\section{Configuration and Environment}
+\subsection{Configuration and Environment}
 
-The pipeline is configured via \texttt{.env} file (see \texttt{.env.example}):
+The pipeline is configured via \texttt{.env} file:
 
 \begin{lstlisting}[caption=Pipeline configuration]
 # AWS S3 configuration
@@ -1050,7 +1086,7 @@ DICTIONARY_ENABLE=true        # Enable dictionary
 NFC_NORMALIZE=true           # Enable Unicode norm
 \end{lstlisting}
 
-\section{Batch Processing}
+\subsection{Batch Processing}
 
 For production use, the pipeline supports batch processing of multiple documents:
 
@@ -1067,7 +1103,7 @@ if __name__ == "__main__":
     )
 \end{lstlisting}
 
-\section{HITL (Human-in-the-Loop) Review System}
+\subsection{HITL (Human-in-the-Loop) Review System}
 
 For field deployment, a Streamlit-based review interface allows human annotators to:
 \begin{enumerate}
@@ -1079,26 +1115,26 @@ For field deployment, a Streamlit-based review interface allows human annotators
 \end{enumerate}
 
 This reduces per-document review time from $\sim$5 minutes (manual entry) to $\sim$1-2 minutes (human correction), achieving approximately 3$\times$ throughput over pure manual transcription.
-
+\newpage
 % ============================================================================
-\chapter{Conclusions and Future Work}
+\section{Conclusions and Future Work}
 % ============================================================================
 
-\section{Summary of Achievements}
+\subsection{Summary of Achievements}
 
 This project successfully built a production-grade OCR pipeline for handwritten Hindi documents:
 
-\subsection{Technical Achievements}
+\subsubsection{Technical Achievements}
 
 \begin{itemize}
     \item \textbf{Detection:} YOLOv8 model with 0.84 mAP@50, 87\% recall on Pratham data
     \item \textbf{Recognition:} TrOCR fine-tuned to 7.12\% CER on HindiSeg test
     \item \textbf{End-to-end:} 36.4\% CER on controlled evaluation pages, 71.3\% on real field data
-    \item \textbf{Domain adaptation:} Domain mix-in contributed 16.4 pp improvement on field data
+    \item \textbf{Domain adaptation:} Domain mix-in contributed 16.4 \% improvement on field data
     \item \textbf{Post-processing:} Integrated NFC, LM, dictionary, and reading order with careful ablation
 \end{itemize}
 
-\subsection{Infrastructure and Tools}
+\subsubsection{Infrastructure and Tools}
 
 \begin{itemize}
     \item Multi-user annotation portal (Streamlit) for data curation
@@ -1107,7 +1143,7 @@ This project successfully built a production-grade OCR pipeline for handwritten 
     \item Comprehensive evaluation framework with honest reporting
 \end{itemize}
 
-\subsection{Honest Assessment}
+\subsubsection{Honest Assessment}
 
 This project is honest about what was achieved:
 \begin{itemize}
@@ -1118,7 +1154,7 @@ This project is honest about what was achieved:
     \item ✗ Inter-annotator agreement (kappa = 0.62) reveals data quality challenges
 \end{itemize}
 
-\section{What Didn't Achieve Target}
+\subsubsection{What Didn't Achieve Target}
 
 \begin{table}[h]
     \centering
@@ -1139,27 +1175,27 @@ This project is honest about what was achieved:
 
 The gap between ``field performance'' and ``fully automated'' is the key limitation. Real ASER field handwriting is harder than available training data.
 
-\section{Key Lessons Learned}
+\subsection{Key Lessons Learned}
 
-\subsection{1. Domain Adaptation Is Essential}
+\subsubsection{Lesson 1: Domain Adaptation Is Essential}
 
-The single largest improvement (16.4 pp) came from training on 240 field-annotated samples. General-purpose models, even fine-tuned ones, cannot match domain-specific training.
+The single largest improvement (16.4 \%) came from training on 240 field-annotated samples. General-purpose models, even fine-tuned ones, cannot match domain-specific training.
 
-\subsection{2. Post-Processing Must Match Domain}
+\subsubsection{Lesson 2: Post-Processing Must Match Domain}
 
-The LM, trained on HindiSeg vocabulary, regressed on field data (+0.6 pp CER). Domain-specific post-processing (dictionary, LM) requires domain-specific tuning. A general-purpose LM may hurt.
+The LM, trained on HindiSeg vocabulary, regressed on field data (+0.6 \% CER). Domain-specific post-processing (dictionary, LM) requires domain-specific tuning. A general-purpose LM may hurt.
 
-\subsection{3. Data Quality Limits Learning}
+\subsubsection{Lesson 3: Data Quality Limits Learning}
 
 Inter-annotator agreement (kappa = 0.62) reveals that field data is genuinely ambiguous. No ML method can exceed the quality of training labels. Further improvements require clearer annotation guidelines and more annotators.
 
-\subsection{4. Decoupled Architecture Enables Transparency}
+\subsubsection{Lesson 4: Decoupled Architecture Enables Transparency}
 
 Separating detection and recognition made error attribution possible. Without this decomposition, it would be impossible to say which stage fails and by how much.
 
-\section{Future Work}
+\subsection{Future Work}
 
-\subsection{Short-term (Production Hardening)}
+\subsubsection{Short-term (Production Hardening)}
 
 \begin{enumerate}
     \item \textbf{Expand gold set:} Annotate 400+ field samples with dual review for domain adaptation
@@ -1168,7 +1204,7 @@ Separating detection and recognition made error attribution possible. Without th
     \item \textbf{HITL UX:} Optimize interface for 1-minute per-page review time
 \end{enumerate}
 
-\subsection{Medium-term (Model Improvements)}
+\subsubsection{Medium-term (Model Improvements)}
 
 \begin{enumerate}
     \item \textbf{Larger ViT encoder:} Experiment with ViT-large for better feature extraction
@@ -1177,7 +1213,7 @@ Separating detection and recognition made error attribution possible. Without th
     \item \textbf{Confidence calibration:} Train confidence scores for HITL prioritization
 \end{enumerate}
 
-\subsection{Long-term (Fundamental Research)}
+\subsubsection{Long-term (Fundamental Research)}
 
 \begin{enumerate}
     \item \textbf{Few-shot learning:} Can we adapt to new scripts/languages with < 100 samples?
@@ -1186,7 +1222,7 @@ Separating detection and recognition made error attribution possible. Without th
     \item \textbf{Cross-lingual transfer:} Transfer from Hindi to other Indic scripts (Bengali, Telugu, etc.)
 \end{enumerate}
 
-\section{Production Deployment Checklist}
+\subsubsection{Production Deployment Checklist}
 
 Before deploying v2 to ASER field teams:
 
@@ -1199,7 +1235,7 @@ Before deploying v2 to ASER field teams:
     \item ☐ Plan retraining schedule (quarterly? on accumulating field data?)
 \end{itemize}
 
-\section{Final Remarks}
+\subsubsection{Final Takeaways}
 
 This project demonstrates that custom, domain-specific OCR for niche languages (handwritten Hindi on field documents) is achievable with modest ML resources. The key insights are:
 
@@ -1250,16 +1286,16 @@ The v2 system is not fully automated, but it is genuinely useful: it reduces man
 \bibitem{pratham2024aser} Pratham Education Foundation. (2024). ASER: Annual Status of Education Report. Retrieved from https://www.pratham.org/
 
 \end{thebibliography}
-
+\newpage
 % ============================================================================
 % Appendices
 % ============================================================================
 
 \begin{appendices}
+\newpage
+\section{Software Implementation Details}
 
-\chapter{Software Implementation Details}
-
-\section{Environment and Dependencies}
+\subsection{Environment and Dependencies}
 
 \begin{lstlisting}[caption=Installing dependencies]
 pip install -r requirements.txt
@@ -1272,7 +1308,7 @@ pip install -r requirements.txt
 # - streamlit>=1.28.0        # Annotation tool
 \end{lstlisting}
 
-\section{Running the Full Pipeline}
+\subsection{Running the Full Pipeline}
 
 \begin{lstlisting}[caption=Running v2 pipeline]
 cd pipeline/
@@ -1285,9 +1321,9 @@ export LM_ENABLE_FIELD=false
 python scripts/pipeline_v2.py
 \end{lstlisting}
 
-\chapter{Dataset Specifications}
+\section{Dataset Specifications}
 
-\section{HindiSeg Format}
+\subsection{HindiSeg Format}
 
 Each split file (train.txt, val.txt, test.txt) follows the format:
 \begin{lstlisting}
@@ -1297,7 +1333,7 @@ writer_001/folder_0/00002.jpg        aapka
 ...
 \end{lstlisting}
 
-\section{Pratham Field Format (CSV)}
+\subsection{Pratham Field Format (CSV)}
 
 \begin{lstlisting}
 image_path,directory,filename,hindi_text,notes
@@ -1305,9 +1341,9 @@ image_path,directory,filename,hindi_text,notes
 ...
 \end{lstlisting}
 
-\chapter{Detailed Error Analysis}
+\section{Detailed Error Analysis}
 
-\section{Recognition Error Distribution}
+\subsection{Recognition Error Distribution}
 
 Analysis of v2 errors on HindiSeg test set shows:
 
