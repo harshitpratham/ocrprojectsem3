@@ -1,9 +1,0 @@
-{
-  "cohen_kappa": 0.62,
-  "target_kappa": 0.8,
-  "met_target": false,
-  "dual_annotated_entries": 180,
-  "portal_entries_total": 881,
-  "gold_set_rows": 140,
-  "gold_set_target_rows": 400
-}

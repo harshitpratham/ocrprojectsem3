@@ -1,7 +1,0 @@
-{
-  "release": "v2",
-  "trocr_hindiseg_test_cer": 0.0712,
-  "trocr_hindiseg_test_cer_v1": 0.0817,
-  "delta_relative_pct": -12.9,
-  "note": "Modest gain; checkpoint near saturation on HindiSeg distribution."
-}

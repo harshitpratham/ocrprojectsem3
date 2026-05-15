@@ -52,8 +52,11 @@ annotations/users.json
 # Local Drive export zip (dataset lives under data/yolo_training_dataset/)
 drive-download-*.zip
 
-# Virtual environments anywhere in tree
-data/data-annotation/
+# Data and docs withheld under sponsor NDA — see README
+data/
+docs/
+
+# Virtual environments anywhere in tree (legacy, now covered above)
 
 
 # macOS
