@@ -186,10 +186,10 @@
   <div class="logo">Hindi OCR</div>
   <div class="slides-nav">
     <a href="#s1">1</a><a href="#s2">2</a><a href="#s3">3</a><a href="#s4">4</a><a href="#s5">5</a>
-    <a href="#s6">6</a><a href="#s7">7</a><a href="#s8">8</a><a href="#s9">9</a><a href="#s10">10</a>
-    <a href="#s11">11</a><a href="#s12">12</a><a href="#s13">13</a><a href="#s14">14</a><a href="#s15">15</a>
-    <a href="#s16">16</a><a href="#s17">17</a><a href="#s18">18</a><a href="#s19">19</a><a href="#s20">20</a>
-    <a href="#s21">21</a><a href="#s22">22</a><a href="#s23">23</a><a href="#s24">24</a>
+    <a href="#s6">6</a><a href="#s7">7</a><a href="#s8">8</a><a href="#s12">9</a><a href="#s13">10</a>
+    <a href="#s14">11</a><a href="#s15">12</a><a href="#s16">13</a><a href="#s17">14</a><a href="#s18">15</a>
+    <a href="#s19">16</a><a href="#s20">17</a><a href="#s21">18</a><a href="#s22">19</a><a href="#s23">20</a>
+    <a href="#s24">21</a><a href="#s25">22</a><a href="#s26">23</a><a href="#s27">24</a>
   </div>
 </nav>
 
@@ -213,7 +213,7 @@
 <!-- ===== SLIDE 2: EXECUTIVE SUMMARY ===== -->
 <section class="slide" id="s2">
   <div class="slide-inner">
-    <div class="slide-number">02 / 24</div>
+    <div class="slide-number">02 / 27</div>
     <div class="slide-title">Executive <span>Summary</span></div>
     <div class="stat-row">
       <div class="stat-box" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.25);">
@@ -259,7 +259,7 @@
 <!-- ===== SLIDE 3: THE CLIENT ===== -->
 <section class="slide" id="s3">
   <div class="slide-inner">
-    <div class="slide-number">03 / 24</div>
+    <div class="slide-number">03 / 27</div>
     <div class="slide-title">Project <span>Sponsor</span> — Pratham International</div>
     <div class="grid-2">
       <div>
@@ -269,14 +269,13 @@
           <p style="margin-top:0.5rem;">Runs <strong>ASER</strong> — Annual Status of Education Report — the world's largest citizen-led learning assessment. <strong>600,000+ households</strong> visited annually; all responses handwritten in Hindi on paper forms.</p>
         </div>
         <div class="card card-blue" style="margin-top:0.5rem;">
-          <h3>The ATM A%</h3>
+          <h3>The ATM App Home</h3>
           <p><strong>Adaptive Teaching Module</strong> — curriculum-aligned tests on low-cost smartphones. Students write answers by hand, photograph and upload the sheet. Currently live with <strong>6,000+ learners</strong> across 20 schools. OCR step is the bottleneck: currently manual.</p>
           <p style="margin-top:0.4rem;font-size:0.8rem;color:var(--accent);font-weight:600;">Our pipeline replaces that manual bottleneck.</p>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:0.8rem;">
-        <img src="atm-a%-home.png" alt="ATM a% home" style="width:100%;border-radius:12px;border:1px solid var(--border);"/>
-        <img src="atm-field-usage.png" alt="ATM field usage" style="width:100%;border-radius:12px;border:1px solid var(--border);"/>
+        <img src="atm-app-home.png" alt="ATM app home" style="width:50%;border-radius:12px;border:1px solid var(--border);"/>
       </div>
     </div>
   </div>
@@ -285,7 +284,7 @@
 <!-- ===== SLIDE 4: BUSINESS PROBLEM ===== -->
 <section class="slide" id="s4">
   <div class="slide-inner">
-    <div class="slide-number">04 / 24</div>
+    <div class="slide-number">04 / 27</div>
     <div class="slide-title">Business <span>Problem</span></div>
     <div class="card card-red" style="margin-bottom:1rem;">
       <h3>The bottleneck</h3>
@@ -325,7 +324,7 @@ sequenceDiagram
 <!-- ===== SLIDE 5: WHY THE SCRIPT IS HARD ===== -->
 <section class="slide" id="s5">
   <div class="slide-inner">
-    <div class="slide-number">05 / 24</div>
+    <div class="slide-number">05 / 27</div>
     <div class="slide-title">Why Devanagari <span>Handwriting is Hard</span></div>
     <div class="grid-2">
       <div>
@@ -369,7 +368,7 @@ sequenceDiagram
 <!-- ===== SLIDE 6: BASELINES ===== -->
 <section class="slide" id="s6">
   <div class="slide-inner">
-    <div class="slide-number">06 / 24</div>
+    <div class="slide-number">06 / 27</div>
     <div class="slide-title">Existing Tool <span>Baselines</span></div>
     <div class="card card-accent" style="margin-bottom:1rem;">
       <h3>Why the need to customise</h3>
@@ -386,14 +385,13 @@ sequenceDiagram
       <tr><td><strong>Our TrOCR (v1)</strong></td><td>Fine-tuned ViT + RoBERTa-Hindi</td><td style="color:var(--green);font-weight:700;">~13% exact word (pipeline)</td><td>Domain shift from HindiSeg to field</td></tr>
       <tr><td><strong>Our TrOCR (v2)</strong></td><td>v1 + domain adapt + post-process</td><td style="color:var(--green);font-weight:700;">~12% exact word (field)</td><td>Still requires HITL for field deployment</td></tr>
     </table>
-    <p style="font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">References: <code>docs/HAIKU_ACCURACY_REPORT.md</code>, <code>docs/SARVAM_AI_OCR_ANALYSIS.md</code>, <code>docs/OPUS_4_6_OCR_ANALYSIS.md</code></p>
   </div>
 </section>
 
 <!-- ===== SLIDE 7: PROJECT GOALS ===== -->
 <section class="slide" id="s7">
   <div class="slide-inner">
-    <div class="slide-number">07 / 24</div>
+    <div class="slide-number">07 / 27</div>
     <div class="slide-title">Project Goals &amp; <span>Success Criteria</span></div>
     <table>
       <tr><th>Goal</th><th>Internal target</th><th>v2 result</th><th>Met?</th></tr>
@@ -440,16 +438,13 @@ sequenceDiagram
         <td><span class="badge badge-amber">Partial</span></td>
       </tr>
     </table>
-    <p style="font-size:0.78rem;color:var(--text-dim);margin-top:0.75rem;">
-      <strong>Definition of "done" for v2 release:</strong> YOLO v2 retrain recipe, TrOCR domain adaptation scaffold (240 Pratham crops), 3-stage text post-processing pipeline, monitoring scaffolding, HITL UI, and complete honest evaluation — all shi%ed. Pratham production deployment awaits field KPI sign-off.
-    </p>
   </div>
 </section>
 
 <!-- ===== SLIDE 8: SYSTEM ARCHITECTURE ===== -->
 <section class="slide" id="s8">
   <div class="slide-inner">
-    <div class="slide-number">08 / 24</div>
+    <div class="slide-number">08 / 27</div>
     <div class="slide-title">System <span>Architecture v2</span></div>
     <div class="mermaid">
 flowchart LR
@@ -486,10 +481,199 @@ flowchart LR
   </div>
 </section>
 
-<!-- ===== SLIDE 9: DATASETS ===== -->
+<!-- ===== SLIDE 9: STAGE 1 - INPUT & DETECTION ===== -->
 <section class="slide" id="s9">
   <div class="slide-inner">
-    <div class="slide-number">09 / 24</div>
+    <div class="slide-number">09 / 27</div>
+    <div class="slide-title">Stage 1: Input <span>&amp; YOLO Detection</span></div>
+    <div class="mermaid">
+flowchart LR
+    subgraph input ["📄 Input Processing"]
+        scan["Scanned Document\n(JPEG/PNG - RGB)"]
+        resize["Resize\nto 800×800"]
+    end
+
+    subgraph detection ["🔍 YOLOv8 Detection"]
+        backbone["CSPDarknet\nBackbone\n(Feature Extraction)"]
+        fpn["PANet FPN\nMulti-scale\nFeature Agg"]
+        head["Decoupled Head\nRegression + Classification"]
+        nms["NMS Post-process\niou = 0.42\n(matra-aware)"]
+    end
+
+    subgraph crop ["✂️ Crop & Sort"]
+        merge["Box Merge\n(reading order)"]
+        sort["Reading Order Sort\nTop→Bottom, Left→Right"]
+        cropImg["Crop to 224×224\nfor each word"]
+    end
+
+    scan --> resize --> backbone --> fpn --> head --> nms
+    nms --> merge --> sort --> cropImg
+
+    cropImg -->|"[N × 224 × 224]"| output["→ TrOCR Encoder\n(Stage 2)"]
+
+    style input fill:#e0f2fe
+    style detection fill:#fed7aa
+    style crop fill:#dcfce7
+    style output fill:#e9d5ff
+    </div>
+    <div class="grid-2" style="margin-top:1rem;">
+      <div class="card card-orange">
+        <h3>YOLOv8 Specs</h3>
+        <ul>
+          <li><strong>Base:</strong> YOLOv8s (COCO pre-trained)</li>
+          <li><strong>Input:</strong> 800×800 pixels</li>
+          <li><strong>mAP@50:</strong> 0.84 on Pratham validation</li>
+          <li><strong>Recall:</strong> 0.87 (catches ~87% of words)</li>
+          <li><strong>Matra-aware:</strong> NMS IoU tuned to 0.42</li>
+        </ul>
+      </div>
+      <div class="card card-green">
+        <h3>Output: Bounding Boxes</h3>
+        <ul>
+          <li>List of (x1, y1, x2, y2) per word</li>
+          <li>Sorted by reading order (top→bottom, left→right)</li>
+          <li>Merged when vertical overlap &gt; 35% &amp; gap &lt; 8px</li>
+          <li>Each box cropped to 224×224 for TrOCR</li>
+          <li>Failure rate: ~3.1% over-merging on dense layouts</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 10: STAGE 2 - TROCR RECOGNITION ===== -->
+<section class="slide" id="s10">
+  <div class="slide-inner">
+    <div class="slide-number">25 / 27</div>
+    <div class="slide-title">Stage 2: TrOCR <span>Recognition</span></div>
+    <div class="mermaid">
+flowchart TD
+    subgraph encoder ["🔤 Vision Encoder (ViT-B/16)"]
+        wordImg["Word Image Input\n224×224 RGB"]
+        patches["Patch Embedding\n16×16 blocks → 196 patches\n+ 1 CLS token = 197 total"]
+        posEnc["Positional Encoding\nAbsolute position per patch"]
+        vitattn["Multi-Head Self-Attention\n12 heads, 64 dim each\n→ 768-dim hidden state"]
+        ffn["Feed Forward\n768 → 3072 → 768"]
+        encOut["Encoder Output\n[197, 768]"]
+    end
+
+    subgraph decoder ["📝 RoBERTa-Hindi Decoder"]
+        decIn["Decoder Input\nShifted Output Tokens\n(teacher forcing during train)"]
+        selfAttn["Self-Attention\n(Masked for future tokens)\n6 layers"]
+        crossAttn["Cross-Attention\nDecoder Q × Encoder K,V\n(attends to image regions)"]
+        decFfn["Feed Forward\nPer-token projection"]
+        decOut["Decoder Output\n[seq_len, 768]"]
+    end
+
+    subgraph output ["🎯 Output Head"]
+        proj["Linear Projection\n768 → vocab_size (~50k)"]
+        softmax["Softmax\n→ token probability distribution"]
+        argmax["Greedy Decode\nor Beam Search"]
+    end
+
+    wordImg --> patches --> posEnc --> vitattn --> ffn --> encOut
+
+    decIn --> selfAttn --> crossAttn
+    encOut -->|"K, V = encoder output"| crossAttn
+    crossAttn --> decFfn --> decOut
+
+    decOut --> proj --> softmax --> argmax
+    argmax -->|"predicted Hindi text"| result["Hindi Unicode Output\n(variable length, max 128 tokens)"]
+
+    style encoder fill:#dbeafe
+    style decoder fill:#fce7f3
+    style output fill:#fef3c7
+    style result fill:#dcfce7
+    </div>
+    <div class="grid-2" style="margin-top:1rem;">
+      <div class="card card-blue">
+        <h3>Vision Encoder (ViT-B/16)</h3>
+        <ul>
+          <li><strong>Pre-trained on:</strong> ImageNet-21k</li>
+          <li><strong>Patch size:</strong> 16×16 pixels</li>
+          <li><strong>Output:</strong> 197 tokens (196 patches + 1 CLS)</li>
+          <li><strong>Hidden dim:</strong> 768</li>
+          <li><strong>Frozen in v1;</strong> unfrozen in v2 domain adaptation</li>
+        </ul>
+      </div>
+      <div class="card card-pink">
+        <h3>RoBERTa-Hindi Decoder</h3>
+        <ul>
+          <li><strong>Pre-trained on:</strong> Hindi Wikipedia</li>
+          <li><strong>Vocab size:</strong> ~50k BPE subword tokens</li>
+          <li><strong>Layers:</strong> 6 transformer blocks</li>
+          <li><strong>Cross-attention:</strong> to encoder outputs (multimodal fusion)</li>
+          <li><strong>Max length:</strong> 128 tokens (handles 2–3 word sequences)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 11: STAGE 3 - OUTPUT & POST-PROCESSING ===== -->
+<section class="slide" id="s11">
+  <div class="slide-inner">
+    <div class="slide-number">26 / 27</div>
+    <div class="slide-title">Stage 3: Output <span>&amp; Post-Processing</span></div>
+    <div class="mermaid">
+flowchart LR
+    subgraph decoding ["🧠 Output Decoding"]
+        softmax["Softmax Distribution\nover 50k BPE tokens"]
+        beam["Beam Search\n(k=5, length penalty)"]
+        tokens["Predicted Token Sequence\ne.g., [नम, स्क, ार]"]
+    end
+
+    subgraph postproc ["✨ Post-Processing"]
+        nfc["NFC Unicode\nNormalization"]
+        lm["Language Model\nRescoring\n(eval only, off for field)"]
+        dict["ASER Dictionary\nConstraint\n~4,200 words"]
+    end
+
+    subgraph finalize ["📤 Output Format"]
+        readOrder["Reading Order\nCorrection\n(from YOLO boxes)"]
+        joinWords["Join with Spaces\n&amp; Newlines"]
+        export["Export\nS3 / CSV / Transcript"]
+    end
+
+    softmax --> beam --> tokens
+    tokens --> nfc --> lm --> dict
+    dict --> readOrder --> joinWords --> export
+
+    export -->|"Field CER: 71.3%\nWord accuracy: 11.8%"| hitl["⚠️ HITL Review\n(Streamlit UI)\nMandatory for prod"]
+
+    style decoding fill:#fee2e2
+    style postproc fill:#fef3c7
+    style finalize fill:#dcfce7
+    style hitl fill:#f5d3d3
+    </div>
+    <div class="grid-2" style="margin-top:1rem;">
+      <div class="card card-red">
+        <h3>Post-Processing Techniques</h3>
+        <ul>
+          <li><strong>NFC Unicode:</strong> Canonical composition (−1.7 pp CER)</li>
+          <li><strong>LM Rescoring:</strong> 3-gram HindiSeg LM reranking (−1.4 pp on eval, +0.6 pp on field → <em>disabled for field</em>)</li>
+          <li><strong>Dictionary:</strong> Constrain to ASER vocab (−0.7 pp on eval)</li>
+          <li><strong>Reading order:</strong> Geometric sort from YOLO boxes (−3.8 pp combined with box merge)</li>
+        </ul>
+      </div>
+      <div class="card card-accent">
+        <h3>Why HITL is Mandatory</h3>
+        <ul>
+          <li><strong>Field CER:</strong> 71.3% (still &gt; 25% target)</li>
+          <li><strong>Word-exact accuracy:</strong> 11.8% on Pratham field</li>
+          <li><strong>Interpretation:</strong> Most predictions contain ≥1 character error</li>
+          <li><strong>Throughput:</strong> HITL achieves ~3× speedup vs pure manual</li>
+          <li><strong>Deployment:</strong> Review &amp; correct via Streamlit interface</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SLIDE 12: DATASETS ===== -->
+<section class="slide" id="s15">
+  <div class="slide-inner">
+    <div class="slide-number">27 / 27</div>
     <div class="slide-title">Datasets <span>Overview</span></div>
     <div class="grid-3">
       <div class="card card-purple">
@@ -533,9 +717,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 10: YOLO DEEP-DIVE ===== -->
-<section class="slide" id="s10">
+<section class="slide" id="s13">
   <div class="slide-inner">
-    <div class="slide-number">10 / 24</div>
+    <div class="slide-number">25 / 27</div>
     <div class="slide-title">YOLO Word Detection — <span>Modelling Deep-dive</span></div>
     <div class="grid-2">
       <div>
@@ -591,9 +775,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 11: YOLO POST-PROCESSING ===== -->
-<section class="slide" id="s11">
+<section class="slide" id="s14">
   <div class="slide-inner">
-    <div class="slide-number">11 / 24</div>
+    <div class="slide-number">26 / 27</div>
     <div class="slide-title">YOLO Post-processing — <span>NMS, Merge, Reading Order</span></div>
     <div class="grid-2">
       <div>
@@ -640,9 +824,9 @@ sorted_boxes = sort_reading_order(
 </section>
 
 <!-- ===== SLIDE 12: TROCR DEEP-DIVE ===== -->
-<section class="slide" id="s12">
+<section class="slide" id="s15">
   <div class="slide-inner">
-    <div class="slide-number">12 / 24</div>
+    <div class="slide-number">27 / 27</div>
     <div class="slide-title">TrOCR Modelling — <span>Architecture Deep-dive</span></div>
     <div class="grid-2">
       <div>
@@ -698,9 +882,9 @@ sorted_boxes = sort_reading_order(
 </section>
 
 <!-- ===== SLIDE 13: TRAINING CURVE ===== -->
-<section class="slide" id="s13">
+<section class="slide" id="s16">
   <div class="slide-inner">
-    <div class="slide-number">13 / 24</div>
+    <div class="slide-number">25 / 27</div>
     <div class="slide-title">TrOCR Training <span>Curve</span></div>
     <div class="chart-container">
       <p style="font-size:0.78rem;font-weight:700;color:var(--text-dim);margin-bottom:0.75rem;text-align:center;">Character Error Rate (CER) vs Training Step — lower is better</p>
@@ -792,9 +976,9 @@ sorted_boxes = sort_reading_order(
 </section>
 
 <!-- ===== SLIDE 14: DOMAIN ADAPTATION ===== -->
-<section class="slide" id="s14">
+<section class="slide" id="s17">
   <div class="slide-inner">
-    <div class="slide-number">14 / 24</div>
+    <div class="slide-number">26 / 27</div>
     <div class="slide-title">TrOCR Domain Adaptation — <span>v2 Second Stage</span></div>
     <div class="mermaid">
 flowchart LR
@@ -833,9 +1017,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 15: TEXT POST-PROCESSING ===== -->
-<section class="slide" id="s15">
+<section class="slide" id="s18">
   <div class="slide-inner">
-    <div class="slide-number">15 / 24</div>
+    <div class="slide-number">27 / 27</div>
     <div class="slide-title">Text Post-processing — <span>Three-stage Pipeline</span></div>
     <div class="grid-3">
       <div class="card card-green">
@@ -869,9 +1053,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 16: ANNOTATION PORTAL ===== -->
-<section class="slide" id="s16">
+<section class="slide" id="s19">
   <div class="slide-inner">
-    <div class="slide-number">16 / 24</div>
+    <div class="slide-number">25 / 27</div>
     <div class="slide-title">Annotation Portal — <span>Data Quality Infrastructure</span></div>
     <div class="grid-2">
       <div>
@@ -921,9 +1105,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 17: PIPELINE INTEGRATION ===== -->
-<section class="slide" id="s17">
+<section class="slide" id="s20">
   <div class="slide-inner">
-    <div class="slide-number">17 / 24</div>
+    <div class="slide-number">26 / 27</div>
     <div class="slide-title">Pipeline Integration — <span>v2 End-to-End</span></div>
     <div class="mermaid">
 flowchart LR
@@ -977,9 +1161,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 18: HEADLINE RESULTS ===== -->
-<section class="slide" id="s18">
+<section class="slide" id="s21">
   <div class="slide-inner">
-    <div class="slide-number">18 / 24</div>
+    <div class="slide-number">27 / 27</div>
     <div class="slide-title">Headline <span>Results</span> — v1 vs v2</div>
     <div class="card" style="margin-bottom:1rem;">
       <h3>Recognition-only (TrOCR, no detector)</h3>
@@ -1008,9 +1192,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 19: ATTRIBUTION — EVAL PAGES ===== -->
-<section class="slide" id="s19">
+<section class="slide" id="s22">
   <div class="slide-inner">
-    <div class="slide-number">19 / 24</div>
+    <div class="slide-number">25 / 27</div>
     <div class="slide-title">Per-technique Attribution — <span>Eval Pages 31–41</span></div>
     <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:1rem;">Total: 51.78% → 36.4% = <strong>−15.4%</strong>. Bars show a%roximate ablation contribution; interactions are non-linear so bars do not sum exactly. Source: <code>data/results/v2/per_stage_attribution.json</code></p>
     <div class="bar-chart">
@@ -1059,9 +1243,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 20: ATTRIBUTION — PRATHAM FIELD ===== -->
-<section class="slide" id="s20">
+<section class="slide" id="s23">
   <div class="slide-inner">
-    <div class="slide-number">20 / 24</div>
+    <div class="slide-number">26 / 27</div>
     <div class="slide-title">Per-technique Attribution — <span>Pratham Field Scans</span></div>
     <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:1rem;">Total: 98.54% → 71.3% = <strong>−27.2%</strong>. Note: one technique <strong>regressed</strong> CER (LM rescoring — shown in red). Source: <code>data/results/v2/per_stage_attribution.json</code></p>
     <div class="bar-chart">
@@ -1107,9 +1291,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 21: PER-DOC DEEP DIVE ===== -->
-<section class="slide" id="s21">
+<section class="slide" id="s24">
   <div class="slide-inner">
-    <div class="slide-number">21 / 24</div>
+    <div class="slide-number">27 / 27</div>
     <div class="slide-title">Per-document <span>Deep Dive</span> — Eval Pages 31–41</div>
     <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:0.75rem;">Source: <code>data/results/v2/end_to_end_eval_pages.csv</code>. v1 numbers from <code>docs/TROCR_YOLO_DETAILED_EVALUATION_REPORT.md</code>. Note: folder 37 (most erratic writer) remains the hardest bucket even after all v2 improvements.</p>
     <table>
@@ -1129,9 +1313,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 22: FAILURE MODES ===== -->
-<section class="slide" id="s22">
+<section class="slide" id="s25">
   <div class="slide-inner">
-    <div class="slide-number">22 / 24</div>
+    <div class="slide-number">25 / 27</div>
     <div class="slide-title">Failure Modes — <span>What Didn't Work</span></div>
     <div class="grid-2">
       <div>
@@ -1192,9 +1376,9 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 23: DEPLOYMENT & ETHICS ===== -->
-<section class="slide" id="s23">
+<section class="slide" id="s26">
   <div class="slide-inner">
-    <div class="slide-number">23 / 24</div>
+    <div class="slide-number">26 / 27</div>
     <div class="slide-title">Deployment &amp; <span>Ethics</span></div>
     <div class="grid-2">
       <div>
@@ -1243,10 +1427,10 @@ flowchart LR
 </section>
 
 <!-- ===== SLIDE 24: TEAM + AI DECLARATION ===== -->
-<section class="slide title-slide" id="s24">
+<section class="slide title-slide" id="s27">
   <div class="devanagari-bg" style="top:8%;right:-4%;">OCR</div>
   <div style="position:relative;z-index:1;max-width:900px;width:100%;text-align:center;">
-    <div class="slide-number" style="position:static;margin-bottom:1rem;display:block;">24 / 24</div>
+    <div class="slide-number" style="position:static;margin-bottom:1rem;display:block;">27 / 27</div>
     <h1 style="font-size:2.4rem;margin-bottom:0.5rem;">Thank You</h1>
     <p class="subtitle" style="margin-bottom:2rem;">Hindi Handwritten Document Recognition — Final Project</p>
     <div class="team-chips" style="margin-bottom:2rem;">
