@@ -372,7 +372,7 @@ sequenceDiagram
     <div class="slide-number">06 / 24</div>
     <div class="slide-title">Existing Tool <span>Baselines</span></div>
     <div class="card card-accent" style="margin-bottom:1rem;">
-      <h3>Why we needed to build custom</h3>
+      <h3>Why the need to customise</h3>
       <p>We tested every accessible alternative before building. None met the bar for field-level handwritten Hindi. The results below drove the decision to fine-tune domain-specific models.</p>
     </div>
     <table>
@@ -1205,6 +1205,7 @@ flowchart LR
             <li>LM rescoring <strong>off by default</strong> for field; any change requires re-running ablation on field data</li>
             <li>Monitoring SLOs need Pratham ops sign-off before production alerting</li>
             <li>v2 model weights not hosted publicly; see <code>models/MODEL_STORAGE.md</code> for EC2 access</li>
+            <li><strong>Model &amp; data details under NDA</strong> — architecture specifics, training data, evaluation artefacts, and Pratham field images are <em>not publicly releasable</em> under the non-disclosure agreement with Pratham International; academic use only within the project team</li>
           </ul>
         </div>
         <div class="card card-blue" style="margin-top:0.5rem;">
@@ -1220,6 +1221,7 @@ flowchart LR
         <div class="card card-red">
           <h3>Ethical considerations</h3>
           <ul>
+            <li><strong>Non-disclosure agreement (NDA):</strong> All model weights, training data, evaluation artefacts, and Pratham field images are covered by a signed NDA with Pratham International — not shareable outside the project team or disclosed publicly</li>
             <li><strong>Student data sensitivity:</strong> ASER responses are from rural children. Data must follow Pratham's data-handling agreements — no sharing with third parties, no public release of raw images</li>
             <li><strong>No automated grading without review:</strong> model errors that reduce a student's score unfairly are worse than slow manual grading. HITL gate is not optional</li>
             <li><strong>Annotator bias:</strong> 881 rows from a single Ubuntu deployment; ka%a 0.62 suggests label noise. Domain adaptation trained on this data inherits annotation inconsistency</li>

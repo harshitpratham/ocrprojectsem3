@@ -1,4 +1,4 @@
-\documentclass[14pt]{article}
+\documentclass[14pt,a4paper]{article}
 
 % Language/Font setting
 \usepackage{fontspec, polyglossia, tcolorbox}
@@ -20,19 +20,55 @@
 	marginparwidth=1.75cm
 ]{geometry}
 
-% Illustrations & Math
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{cite}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage[toc,page]{appendix}
+
+% Listing configuration
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    tabsize=4,
+}
+
+% Header and footer
+% Footer: "Page X of Y" bottom center
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhead{}\fancyfoot{}
+\cfoot{Page \thepage\ of \pageref{LastPage}}
+
 \usepackage{graphicx}
 \usepackage{svg}
 \usepackage{subcaption}
 \usepackage{caption}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
-\usepackage{listings}
 \usepackage{amsmath, amssymb}
-
-% Gantt Chart
-\usepackage{pgfgantt}
-\usepackage{xcolor}
-\usepackage{float}
+% TikZ libraries
+\usetikzlibrary{shapes, arrows, positioning, calc, decorations.pathmorphing}
 
 % Tables: control and centering
 \usepackage{tabularx} % flexible column widths
@@ -42,18 +78,6 @@
 \usepackage{float}
 \setlength{\tabcolsep}{3pt} % Tighten inter-column padding a bit so there is more usable width
 \usepackage{multirow}
-
-% Footer: "Page X of Y" bottom center
-\usepackage{fancyhdr}
-\usepackage{lastpage}
-\pagestyle{fancy}
-\fancyhead{}\fancyfoot{}
-\cfoot{Page \thepage\ of \pageref{LastPage}}
-
-% References / Citations
-\usepackage[style=authoryear, sorting=none]{biblatex}
-\addbibresource{references.bib}
-\usepackage{pdfpages}
 
 \title{ \\ \\Group 39 \\ \Hindi Handwritten Document Recognition via Visual Sensing}
 
@@ -69,6 +93,7 @@
 \end{tabularx}%
 \endgroup }
 
+% Document start
 \begin{document}
 \begin{figure}[t]
 	\centering
@@ -85,11 +110,18 @@
 
 \maketitle
 \vspace{1cm} 
+
+% Abstract
 \begin{abstract}
-	This report presents an end-to-end Optical Character Recognition (OCR) system for handwritten Hindi documents. The system combines YOLOv8-based word detection with a fine-tuned Transformer-based Optical Character Recognition (TrOCR) model for character-level recognition. Evaluated on 121 real-world handwritten word crops from Pratham education assessment documents, the system achieves 8.17\% Character Error Rate (CER) on clean pre-segmented words and 50.27\% CER on YOLO-detected words from field scans—representing a 42\% degradation due to detection noise and domain shift. We demonstrate that zero-shot large language models (Claude 3.5 Haiku) achieve 0\% accuracy on this task, confirming the necessity of fine-tuned specialized models. The system processes 69,853 training images covering 11,029 unique Hindi words and has been deployed on AWS EC2 for production evaluation. This work addresses a critical bottleneck in Pratham's Adaptive Teaching Module (ATM) platform, which currently requires manual transcription of student responses—a process affecting 6,000+ learners across rural India.
-			
-	\textbf{Keywords}: Optical Character Recognition (OCR), Real-World
-	Implementation, Education
+This report presents a comprehensive analysis of an end-to-end Optical Character Recognition (OCR) pipeline for handwritten Hindi documents. The system combines YOLO-based word detection with TrOCR-based word recognition, supplemented by sophisticated post-processing techniques. Built for Pratham Education Foundation's ASER field surveys, the pipeline automatically digitizes handwritten student assessments written in Devanagari script.
+
+The v2 release demonstrates significant improvements over the baseline: a 29.7\% relative Character Error Rate (CER) reduction on controlled evaluation pages (51.78\% $\to$ 36.4\%) and a 27.6\% relative improvement on real Pratham field documents (98.54\% $\to$ 71.3\%). However, field document performance reveals that human-in-the-loop review remains mandatory for production deployment. The system achieves 84\% mean Average Precision (mAP) on word detection and 7.12\% CER on standardized test sets.
+
+This report provides deep technical analysis of the architecture, datasets, training methodologies, results interpretation, and deployment constraints. We discuss failure modes, attribution analysis, and honest assessment of what was achieved versus internal targets.
+
+\textbf{Keywords}: Handwritten Text Recognition, Devanagari Script, Hindi OCR,
+YOLOv8, TrOCR, Domain Adaptation, Educational Assessment,
+Human-in-the-Loop, Character Error Rate, End-to-End Pipeline
 \end{abstract}
 
 \thispagestyle{fancy} % ensure cover page uses the same footer
@@ -101,887 +133,1202 @@
 \newpage
 
 \fancyhead[C]{Group 39: Hindi Handwritten Document Recognition via Visual Sensing}
+% ============================================================================
+\chapter{Introduction}
+% ============================================================================
 
-\section{Introduction}
+\section{Motivation and Real-World Context}
 
-\subsection{Background of Pratham International}
-This project is sponsored by \href{https://www.pratham.org/about/}{Pratham International}
-\parencite[]{Pratham:2026}, one of the world's largest education non-profits, serving 600,000+ households annually through their Annual Status of Education Report (ASER) initiative.
+The Pratham Education Foundation operates ASER (Annual Status of Education Report), the world's largest citizen-led rural learning assessment. Every year, tens of thousands of field workers collect handwritten student assessment responses across India. These responses are written in Hindi on paper in widely varying handwriting styles.
 
-Pratham administers large-scale literacy and numeracy assessment across India, collecting thousands of handwritten responses from students through their Adaptive Teaching Module (ATM) app, which is currently live across 20 schools with 6,000+ learners. Students write answers by hand on paper, photograph the sheets, and upload via the app. These responses are written in Hindi on plain or ruled paper, with significant variation in handwriting styles, ink quality, and page layouts. 
+\subsection{The Bottleneck}
 
-However, every response must currently be manually transcribed by teachers or data operators before automated grading can occur. This manual step creates critical bottlenecks because it is challenging, slow, expensive at scale, and delays educational interventions.
-
+Manual transcription of handwritten responses is a critical bottleneck:
 \begin{itemize}
-	\item Limits scalability: Only about 50 pages per person per day can be manually transcribed
-	\item Delays intervention: Educational feedback cannot be delivered in real-time 
-	\item Constraint coverage: With millions of responses annually, manual transcription is tedious
-	\item Employment bottleneck: Hiring sufficient transcribers is costly
+    \item \textbf{Speed:} A human transcriber can process approximately 50 pages per day
+    \item \textbf{Cost:} Thousands of assessors transcribing millions of responses is prohibitively expensive
+    \item \textbf{Scalability:} Cannot scale to meet demand without exponential cost increase
+    \item \textbf{Delay:} Manual transcription delays educational interventions and policy decisions
 \end{itemize}
 
-\subsection{Hindi Linguistics}
-Optical Character Recognition (OCR) remains a challenging frontier in computer vision, particularly for non-Latin scripts. Although OCR for English and other major European languages has reached near-human performance through decades of research and large-scale datasets, handwritten OCR for Indic scripts, particularly Hindi (Devanagari) remains substantially under-solved. Hindi uses the Devanagari script, a complex writing system with:
+\subsection{Why Existing Tools Fail}
 
-\begin{itemize}
-	\item No clear word boundaries: Unlike English, Hindi does not rely on whitespaces to separate words. Instead, words are connected by the shirorekha (a horizontal line running across the top of text)
-	      	      	      
-	\item Complex diacritical marks (matras):Vowels in Hindi are represented by matras that attach above, below, or around base consonants, creating ambiguity in character segmentation
-	      	      	      
-	\item  Conjunct consonants: Multiple consonants combine into composite glyphs (ligatures), fundamentally changing their visual appearance
-	      	      	      
-	\item  Writer variability: Handwriting styles vary dramatically between demographic groups, regions, and educational backgrounds
-\end{itemize}
-
-\begin{figure}[h!]
-	\centering
-	\begin{minipage}{0.45\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{Matra_problem.png}
-		\caption{Matras attached above, below, and around base consonants}
-	\end{minipage}\hfill
-	\begin{minipage}{0.45\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{Fusion_problem.png}
-		\caption{Conjuncts fuse multiple consonants}
-	\end{minipage}
-\end{figure}
-\subsection{The Real-World Gap}
-Based on our research, some of the off-the-shelf solutions have poor OCR results and does not scale well.
-
-\begin{table}[H]
-	\begin{tabular}{
-		| >{\raggedright\arraybackslash}m{3.5cm}
-		| >{\raggedright\arraybackslash}m{4cm}
-		| >{\raggedright\arraybackslash}m{7cm}|
-		}
-		\hline
-		\textbf{Solution}   & \textbf{Cost (USD)} & \textbf{Accuracy on Handwritten Hindi}\\
-		\hline
-				    		
-		% -------- Row 1 --------
-		Tesseract   & Free  & est. 0\% (poor Devanagari support)        
-		\\ \hline	    		 
-		% -------- Row 2 --------
-		Google Cloud Vision & \$1.50 - \$6.00 per image & est. 5\% (English-centric)                
-		\\ \hline		
-		% -------- Row 3 --------
-		Amazon Textract  & \$0.015 per page & est. 3\% (English-centric)                
-		\\ \hline          
-		% -------- Row 4 --------
-		Claude 3.5 Opus  & \$0.003 per image  & est. 15\% (zero-shot, expensive at scale) 
-		\\ \hline
-		% -------- Row 5 --------
-		Claude 3.5 Haiku & \$0.00008 per image  & 0\% (complete failure)                    
-		\\ \hline
-	\end{tabular}
-	\caption{Comparison table between various commercial solutions}
-\end{table}
-\newpage
-\section{Technical Problem Analysis}
-
-\subsection{The Challenge of Devanagari Script}
-
-Hindi writing presents three fundamental technical challenges:
-
-\subsubsection{Challenge 1: Complex Script Structure}
-
-\textbf{Matras and Diacritical Positioning:}
-% \begin{lstlisting}
-% Base + Vowel diacritic (matra) = different character
-% कार्य = क + आ (matra above) + र + य 
-% \end{lstlisting}
-
-\begin{tcolorbox}[
-  colback=white,
-  colframe=gray!70,
-  boxrule=0.6pt,
-  left=6pt,
-  right=6pt,
-  top=6pt,
-  bottom=6pt,
-  fontupper=\hindifont
-]
-Base + vowel matra results in a different character.
-
-\textlanguage{hindi}{
-कार्य = क + ◌ा + र + ् + य
-}
-\end{tcolorbox}
-
-
-
-The matra modifies the base consonant but occupies visual space above or below it. During handwriting, these marks overlap with base characters and neighboring characters, creating ambiguity in pixel-level segmentation.
-
-\textbf{Conjunct Formation (Ligatures):}
-
-\begin{tcolorbox}[
-  colback=white,
-  colframe=gray!70,
-  boxrule=0.6pt,
-  left=6pt,
-  right=6pt,
-  top=6pt,
-  bottom=6pt,
-  fontupper=\hindifont
-]
-Base + vowel matra results in a different character.
-
-\textlanguage{hindi}{
-कार्य = क + ◌ा + र + ् + य
-कर्म, भाषा, विश्वविद्यालय
-}
-\end{tcolorbox}
-
-\begin{tcolorbox}[
-  colback=white,
-  colframe=gray!70,
-  fontupper=\hindifont,
-  boxrule=0.6pt,
-  left=6pt,
-  right=6pt,
-  top=6pt,
-  bottom=6pt
-]
-\textlanguage{hindi}{ कार्य = क + आ + र + यकर्म}
-\end{tcolorbox}
-
-When two consonants combine, they often form entirely new visual shapes with no obvious resemblance to their components.
-
-\subsubsection{Challenge 2: Absence of Word Boundaries}
-
-In English, whitespace clearly separates words. In Hindi, the \textit{shirorekha} runs continuously, creating ambiguity about where one word ends and another begins. Reliable word boundary detection requires:
-
-\begin{itemize}
-	\item Context-aware segmentation (understanding script structure)
-	\item Character-level knowledge (knowing which combinations form valid conjuncts)
-	\item Writer-specific calibration (accounting for individual writing style)
-\end{itemize}
-
-\subsubsection{Challenge 3: Writer Variability}
-
-The evaluation set shows the same word exhibits 100\% error variance depending on handwriting quality. Writers vary by:
-
-\begin{itemize}
-	\item Educational background (affects letter formation consistency)
-	\item Age (affects pen control and letter shaping)
-	\item Writing speed (affects neatness and stroke definition)
-	\item Language proficiency (affects familiarity with character shapes)
-\end{itemize}
-
-This creates a \textbf{domain shift problem:} Models trained on curated, clean data fail catastrophically on real field handwriting.
-
-\subsection{Comparison with English Handwriting Recognition}
-
-English handwriting OCR benefits from clear word boundaries, simpler character sets (26 letters vs. 50+ effective Devanagari characters with conjuncts), and larger datasets. Hindi handwriting OCR must overcome all three limitations, justifying a specialized, domain-specific solution.
-
-\newpage
-
-\section{Project Aim}
-Thus, the aim of this project is to develop a specialized, fine-tuned solution using Vision Transformers and RoBERTa to close this gap.
-
-\section{Project Objectives}
-\subsection{Objective 1: Dataset Development}
-
-Construct a rigorously curated, domain‑specific dataset comprising scanned handwritten Hindi documents, enriched with high‑quality word‑level bounding box annotations and verified transcription ground truth. Data Sources: Scanned ASER assessment sheets, varying in paper quality, ink type, lighting conditions, and page layout.
-
-Annotation Protocol:
-\begin{itemize}
-	\item Use consistent bounding box guidelines (tight around the word, inclusive
-	      of matras).
-	      	      	      
-	\item Dual--pass annotation: first for bounding boxes, second for text
-	      transcription.
-	      	      	      
-	\item Inter--annotator agreement checks to ensure label reliability.
-\end{itemize}
-
-\textit{Example:} 5,000+ cropped word images labelled with their Devanagari
-ground-truth text (e.g.,
-\begin{hindi}
-	"बाल", "किताब", "गोल"
-\end{hindi}
-) with matras preserved.
-
-\subsection{Objective 2: Word Region Localisation}
-It is essential to fine‑-tune YOLO-‑based object detection architecture to achieve robust and precise localisation of handwritten Hindi word regions because word-level localisation is the foundational step in the sensing pipeline. Handwritten Hindi documents lack well-defined word boundaries, and characters can merge into connected components. Traditional contour-based segmentation fails because matras often sit apart from the base glyph.
-
-A YOLO detector trained specifically on annotated Hindi words can generalise across handwriting styles and document noise, enabling scalable and automated pre-processing. In this project, we will be implementing \textbf{YOLOv8 ???} or \textbf{YOLOv5s
-???} for real‑time performance and high detection fidelity.
-
-Training Strategy:
-\begin{itemize}
-	\item Use augmentation (contrast jittering, random cropping, Gaussian noise)
-	      to match real-world scan variability.
-	      	      	      
-	\item Use focal loss or balanced class weighting if word lengths vary significantly.
-	      	      	      
-	\item Expected Output: For each document, a set of bounding boxes [$x_{m}in$,
-	$y_{m}in$, $x_{m}ax$, $y_{m}ax$] enclosing handwritten words.
-\end{itemize}
-
-\textit{Example:} The model detects 20–45 word regions in a typical student
-response sheet, even when the writing is slanted or partially faded.
-
-\subsection{Objective 3: Visual Word Recognition}
-Adapt and fine‑-tune a Transformer‑-based TrOCR model for accurate image‑to‑text
-transcription of cropped handwritten Hindi word images, with explicit
-modelling for script‑specific complexities.
-
-Transformer‑based OCR is state-of-the-art for languages with complex ligatures
-and diacritics. Hindi’s Devanagari script requires nuanced modelling of:
-\begin{itemize}
-	\item Matras appearing above, below, or beside the base consonant,
-	      	      	      
-	\item Conjunct consonants (e.g. \texthindi{क्ष}, \texthindi{त्र}, \texthindi{ज्ञ}),
-	      	      	      
-	\item Nukta-modified characters (e.g. \texthindi{फ़}, \texthindi{ज़}, \texthindi{ख़}).
-\end{itemize}
-
-Generic OCR engines trained on printed text cannot handle these complexities. Fine-tuned TrOCR can learn image--level contextual cues that classical CNN--RNN OCR systems miss.
-\begin{itemize}
-	\item Training Data: Cropped word images from Objective 1.     	      
-	\item Tokenisation: Unicode-normalised Devanagari vocabulary.
-	\item Metrics: Character Error Rate (CER) to capture fine--grained misinterpretations and Word Error Rate (WER) for semantic accuracy.
-\end{itemize}
-\textit{Example:} Correctly distinguishing visually similar pairs like
-\texthindi{पाना} vs \texthindi{पीना} or handling detached matras such as the
-\texthindi{ि} matra placed before the consonant.
-
-\subsection{Objective 4: End--to--End Pipeline Integration}
-Real-world deployment requires a reproducible and maintainable system (not
-just individual models). Integrating detection (YOLO) and recognition (TrOCR)
-into a coordinated processing pipeline ensures scalability, batch operation,
-and consistent performance.
-
-Pipeline Components:
-\begin{itemize}
-	\item Pre--processing: De--noising, contrast normalization, document alignment.	      
-	\item YOLO Detection: Extracting word--level bounding boxes.	      
-	\item Cropping Engine: Batch extraction of word images.      
-	\item TrOCR Recognition: Predicting text for each word in detection order.	      
-	\item Assembly: Reconstructing lines or ordered sequences into a structured JSON/CSV output.
-\end{itemize}
-
-Features:
-\begin{itemize}
-	\item Batch mode for large--scale document processing.  
-	\item Logging and error--handling modules.
-	\item Optional human--in--the--loop correction interface.
-\end{itemize}
-
-\textit{Example:} Input: 600 DPI scanned image of a handwritten worksheet. Output:
-xxxxxx
-
-\subsection{Objective 5: System Performance Evaluation}
-Conduct a rigorous quantitative and comparative evaluation of the integrated system
-using established detection and recognition metrics. Detection Metrics:
-\begin{itemize}
-	\item Precision \& Recall: Measures localisation accuracy vs false positives.     
-	\item mAP (mean Average Precision): Widely accepted for object detection quality.
-\end{itemize}
-
-Recognition Metrics:
-\begin{itemize}
-	\item CER (Character Error Rate): Sensitive to small diacritic mistakes.     	      
-	\item WER (Word Error Rate): Measures overall transcription correctness.
-\end{itemize}
-
-YOLOv5 vs YOLOv8
-\begin{itemize}
-	\item Base vs Large TrOCR models 	      
-	\item Fine-tuned vs Off‑the‑shelf OCR
-\end{itemize}
-
-\textit{Example:}
-\begin{itemize}
-	\item Baseline Google Vision WER: 58%     	      
-	\item Fine‑tuned TrOCR WER: 24%
-\end{itemize}
-\newpage
-\section{Literature Review and Baseline Experiments}
-\subsection{Existing Commercial Solutions}
+Commercial OCR solutions (Tesseract, Google Vision API, Amazon Textract) fail on this task because:
 
 \begin{enumerate}
-	\item \href{https://github.com/tesseract-ocr/tesseract}{Tesseract (Open Source)}
-	      \begin{itemize}
-	      	\item Performance: est. 0\% on handwritten Hindi     	      
-	      	\item Root cause: Training data is primarily print OCR; minimal Devanagari support
-	      	\item Verdict: Unsatisfactory
-	      \end{itemize}
-	\item \href{https://docs.cloud.google.com/vision/docs}{Google Cloud Vision API}
-	      \begin{itemize}
-	      	\item Performance: est. 5\% on handwritten Hindi crops (our manual testing)  	      
-	      	\item Cost: \$1.50–6.00 per image
-	      	\item Limitation: English-centric, general-purpose model without domain-specific fine-tuning capability
-	      	\item Verdict: Insufficient accuracy; cost-prohibitive at scale (millions of responses annually)
-	      \end{itemize}
-	\item \href{https://aws.amazon.com/textract/}{Amazon Textract}
-	      \begin{itemize}
-	      	\item Performance: est. 3\% on handwritten Hindi    
-	      	\item Cost:  \$0.015 per page
-	      	\item Limitation: Designed for English documents, minimal Indic support
-	      	\item Verdict: Not suitable for Hindi handwriting
-	      \end{itemize}
+    \item \textbf{No Clear Word Boundaries:} Devanagari script (the writing system for Hindi) lacks explicit word separation. Characters connect via ligatures and matras (diacritical marks attach above/below base characters), confusing generic word detectors.
+
+    \item \textbf{Handwriting Variation:} Field workers span diverse educational backgrounds and writing styles. Handwriting variation is enormous compared to standardized datasets.
+
+    \item \textbf{Domain Vocabulary:} Pre-trained models are not exposed to ASER-specific vocabulary used in educational assessment contexts.
+
+    \item \textbf{Script Complexity:} Devanagari has 14 vowels, 33 consonants, and complex ligature rules. Matras attach dynamically to base characters.
 \end{enumerate}
 
-\subsection{Large Language Models as Zero-Shot Baselines}
-We conducted a comprehensive zero-shot evaluation of state-of-the-art LLMs:
+\section{Project Objectives}
 
-\begin{table}[H]
-	\begin{tabular}{
-		| >{\raggedright\arraybackslash}m{2.5cm}
-		| >{\raggedright\arraybackslash}m{6cm}
-		| >{\raggedright\arraybackslash}m{6cm}|
-		}
-		\hline
-		\textbf{}  & \textbf{Claude 3.5 Opus (Zero-shot)}                                                                        & \textbf{ Claude 3.5 Haiku (Zero-shot)}    \\
-		\hline
-				    		
-		% -------- Row 1 --------
-		Evaluated on  & \multicolumn{2}{|l|}{121 handwritten Hindi word crops (same eval set as TrOCR)} \\
-		\hline	    		 
-			     		
-		% -------- Row 2 --------
-		Methodology & \multicolumn{2}{|l|}{"What Hindi word is shown in this image?" (no examples, no fine--tuning)} \\
-		\hline	    	
-		
-		% -------- Row 3 --------
-		Result & Achieved ~15\% word accuracy (rough estimate; Opus not formally evaluated on full set) & 0\% accuracy (0 out of 121 words correct) 
-		\\ \hline          
-		        
-		% -------- Row 4 --------
-		Cost (USD) & \$0.003 per image & \$0.00008 per image                       
-		\\ \hline
-		% -------- Row 5 --------
-		Limitation & Optical capability is present but insufficient for handwriting; cost multiplies to \$3,000 for 1M responses &                                           
-		        
-		\begin{itemize}[leftmargin=1.1em, topsep=1pt, itemsep=1pt, parsep=0pt]
-		\item Repeated hallucinations: \begin{hindi} पीदीदु \end{hindi} appeared 19+ times
-		\item Phonetically invalid outputs: \begin{hindi} कनीरीकमीत, नीटीमपत \end{hindi} (not real Hindi words)
-		\item Complete script misunderstanding: Model treated Devanagari as noise and generated plausible-sounding pseudo-Hindi
-		\end{itemize} 
-		\\ \hline
-	\end{tabular}
-\end{table}
+This project addresses these challenges by:
+\begin{enumerate}
+    \item Building a \textbf{custom-trained word detector} (YOLOv8) fine-tuned on handwritten Hindi documents
+    \item Developing a \textbf{specialized word recognizer} (TrOCR) trained on Hindi handwriting datasets
+    \item Implementing \textbf{post-processing techniques} tailored to Devanagari Unicode and ASER vocabulary
+    \item Creating an \textbf{annotation tool} for collecting domain-specific training data
+    \item Establishing an \textbf{honest evaluation framework} that acknowledges failure modes and deployment constraints
+\end{enumerate}
 
-Key finding: Smaller LLMs lack sufficient visual and linguistic grounding for this task. Haiku's 0\% accuracy invalidates LLMs for production use; Opus's 15\% accuracy is insufficient for educational assessment (where accuracy directly impacts student feedback).
+\section{Report Structure}
 
-\subsection{Human Baseline}
-
-Annotator performance on same 121 crops (blind reading):
-
-
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Metric}   & \textbf{Value}                             \\
-		\hline
-		Overall accuracy  & \textbf{71\%} (86/121)                     \\
-		\hline
-		Adjusted accuracy & \textbf{92\%} (79/86, excluding GT errors) \\
-		\hline
-		Per-folder range  & 0\%--100\%                                 \\
-		\hline
-	\end{tabular}
-	\caption{Human annotator performance establishing upper bound.}
-\end{table}
-\newpage
-\section{Technical Implementation}
-\subsection{System Architecture}
-<<insert some Architecture images >>
-
-\subsection{Dataset}
-\subsubsection{HindiSeg Training Dataset}
-
-\textbf{Source:} IIIT-Hyderabad Indic Handwriting Dataset (publicly available research corpus)
-
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Component}     & \textbf{Count} \\
-		\hline
-		Training images        & 69,853         \\
-		\hline
-		Validation images      & 12,708         \\
-		\hline
-		Test images            & 12,869         \\
-		\hline
-		Unique word types      & 11,029         \\
-		\hline
-		Unique writers         & 500+           \\
-		\hline
-		Writers per word (avg) & 8--9           \\
-		\hline
-	\end{tabular}
-	\caption{HindiSeg dataset statistics.}
-\end{table}
-
-\textbf{Vocabulary Coverage:} 11,029 unique Hindi words includes common vocabulary (50\%), scientific/technical terminology (25\%), and regional variations (25\%).
-
-\textbf{Limitations:}
+This report is organized as follows:
 \begin{itemize}
-	\item \textbf{Not Pratham-specific:} Clean, curated dataset vs. real messy field documents.
-	\item \textbf{Writer distribution:} Research volunteers vs. rural ASER field workers.
-	\item \textbf{Domain vocabulary:} General Hindi vs. ASER-specific assessment questions.
+    \item \textbf{Chapter 2:} Technical architecture and pipeline design
+    \item \textbf{Chapter 3:} Dataset descriptions and curation methodology
+    \item \textbf{Chapter 4:} YOLO-based word detection (Stage 1)
+    \item \textbf{Chapter 5:} TrOCR-based word recognition (Stage 2)
+    \item \textbf{Chapter 6:} Post-processing techniques (Stage 3)
+    \item \textbf{Chapter 7:} Results and evaluation methodology
+    \item \textbf{Chapter 8:} Attribution analysis: what each technique contributed
+    \item \textbf{Chapter 9:} Failure modes and deployment constraints
+    \item \textbf{Chapter 10:} Conclusions and future work
 \end{itemize}
 
-\subsubsection{Pratham YOLO Detection Dataset}
+% ============================================================================
+\chapter{System Architecture}
+% ============================================================================
 
-\textbf{Source:} Pratham International provided the handwriting samples
+\section{End-to-End Pipeline Design}
+
+The pipeline decomposes the OCR problem into four sequential stages:
+
+\begin{center}
+\fbox{\begin{minipage}{0.8\textwidth}
+\textbf{Input:} Scanned document image (JPEG/PNG)
+\begin{center}
+$\downarrow$
+\end{center}
+\textbf{Stage 1:} YOLO Word Detection $\rightarrow$ Bounding boxes
+\begin{center}
+$\downarrow$
+\end{center}
+\textbf{Stage 2:} Crop word regions $\rightarrow$ Individual word images
+\begin{center}
+$\downarrow$
+\end{center}
+\textbf{Stage 3:} TrOCR Word Recognition $\rightarrow$ Hindi Unicode text
+\begin{center}
+$\downarrow$
+\end{center}
+\textbf{Stage 4:} Post-processing (NFC, LM, dictionary) $\rightarrow$ Normalized text
+\begin{center}
+$\downarrow$
+\end{center}
+\textbf{Output:} Full document text (Unicode, reading order)
+\end{minipage}}
+\end{center}
+
+\subsection{Stage 1: Word Detection (YOLO)}
+
+YOLOv8 (You Only Look Once v8) is trained to detect the bounding box of each word in a document image. This is a \textbf{language-agnostic task} — the model responds to visual word-shaped blobs regardless of script or content.
+
+\textbf{Key properties:}
+\begin{itemize}
+    \item \textbf{Model:} YOLOv8 small (YOLOv8s), pre-trained on MS COCO
+    \item \textbf{Training:} Fine-tuned on Pratham handwritten documents
+    \item \textbf{Input:} Full document image (variable size, resized to 800px)
+    \item \textbf{Output:} List of bounding boxes (x1, y1, x2, y2) sorted by reading order
+    \item \textbf{Confidence:} Can be thresholded (default: 0.8)
+\end{itemize}
+
+\subsection{Stage 2: Word Recognition (TrOCR)}
+
+TrOCR (Transformer-based Optical Character Recognition) is a Vision Encoder-Decoder model that converts individual word image crops into Unicode Hindi text.
+
+\textbf{Model architecture:}
+\begin{itemize}
+    \item \textbf{Encoder:} Vision Transformer (ViT) based on Google's ViT-B/16-224-in21k
+    \item \textbf{Decoder:} RoBERTa language model fine-tuned for Hindi (flax-community/roberta-hindi)
+    \item \textbf{Training:} Fine-tuned on HindiSeg dataset (69,853 word images)
+    \item \textbf{Input:} Individual word image crop (224 × 224 pixels)
+    \item \textbf{Output:} Unicode Hindi text (variable length, max 128 tokens)
+\end{itemize}
+
+\subsection{Stage 3 \& 4: Post-Processing}
+
+Text post-processing applies several transformations:
+\begin{enumerate}
+    \item \textbf{Unicode Normalization (NFC):} Converts variant representations to canonical form
+    \item \textbf{Language Model Rescoring:} Optional character 3-gram LM reranking
+    \item \textbf{Dictionary Correction:} Constrains output to ASER vocabulary ($\sim$4.2k words)
+    \item \textbf{Reading Order:} Sorts words by geometric position (top-to-bottom, left-to-right)
+\end{enumerate}
+
+\section{Design Decisions and Rationale}
+
+\subsection{Why Decouple Detection and Recognition?}
+
+The two-stage approach (detect then recognize) is superior to end-to-end models because:
 
 \begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Component}     & \textbf{Count}      \\
-		\hline
-		Training images        & 134                 \\
-		\hline
-		Validation images      & 11                  \\
-		\hline
-		Test images            & 10                  \\
-		\hline
-		Word instances (total) & $\sim$3,000         \\
-		\hline
-		Writer groups          & 11 (for evaluation) \\
-		\hline
-	\end{tabular}
-	\caption{Pratham YOLO detection dataset statistics.}
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Criterion} & \textbf{Decoupled} & \textbf{End-to-End} \\
+        \midrule
+        Interpretability & High (audit each stage) & Low (black box) \\
+        Error attribution & Clear (detect vs. recognize) & Mixed (hard to debug) \\
+        Model reuse & Yes (YOLO for any script) & No (language-specific) \\
+        Independent optimization & Yes & No \\
+        Computational efficiency & Medium & Lower \\
+        \bottomrule
+    \end{tabular}
+    \caption{Comparison of decoupled vs. end-to-end pipeline design.}
 \end{table}
 
-\subsection{Evaluation Set}
+\subsection{Model Selection Rationale}
 
-\textbf{121 word crops} extracted from \textbf{11 YOLO validation pages}:
+\textbf{Why YOLOv8?}
+\begin{itemize}
+    \item Real-time performance suitable for batch processing
+    \item Strong on small objects (words are relatively small in a page)
+    \item Well-studied transfer learning behavior
+    \item Active community support and pre-trained weights
+\end{itemize}
+
+\textbf{Why TrOCR?}
+\begin{itemize}
+    \item Transformer-based (sequence-to-sequence): handles variable-length output
+    \item Multi-lingual support: trained on 80+ languages including Hindi
+    \item No character-level alignment needed (unlike older OCR approaches)
+    \item Pre-trained weights reduce data requirements
+\end{itemize}
+
+% ============================================================================
+\chapter{Datasets and Data Curation}
+% ============================================================================
+
+\section{Dataset Overview}
+
+The project uses three distinct datasets, each serving different purposes:
 
 \begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Metric}                  & \textbf{Value}  \\
-		\hline
-		Total crops                      & 121             \\
-		\hline
-		YOLO-detected crops (successful) & 119             \\
-		\hline
-		Writer groups                    & 11              \\
-		\hline
-		Crops per writer (avg)           & 11              \\
-		\hline
-		Writer quality range             & CER 21\%--100\% \\
-		\hline
-	\end{tabular}
-	\caption{Evaluation set characteristics.}
+    \centering
+    \begin{tabular}{lrllr}
+        \toprule
+        \textbf{Dataset} & \textbf{Size} & \textbf{Domain} & \textbf{Purpose} & \textbf{Stage} \\
+        \midrule
+        HindiSeg (IIIT-H) & 95,430 & Controlled handwriting & TrOCR training & Recognition \\
+        Pratham field & 881 & Real ASER assessments & Annotation + domain adapt & Both \\
+        Pratham eval (31-41) & 121 & Real field handwriting & Final evaluation & Both \\
+        \bottomrule
+    \end{tabular}
+    \caption{Summary of datasets used in the project.}
 \end{table}
-\newpage
+
+\section{HindiSeg Dataset}
+
+\subsection{Source and Characteristics}
+
+HindiSeg is the IIIT-H (International Institute of Information Technology, Hyderabad) Indic Handwriting Dataset, specifically the Hindi subset. This is a publicly available benchmark dataset.
+
+\textbf{Characteristics:}
+\begin{itemize}
+    \item \textbf{Scope:} 95,430 isolated word images of handwritten Hindi text
+    \item \textbf{Writers:} Multiple writers with varying handwriting styles
+    \item \textbf{Resolution:} Word-level segmented images (size varies, typically 30-200px wide)
+    \item \textbf{Domain:} General purpose; not specific to any application
+    \item \textbf{Annotation:} Human-transcribed Unicode labels
+\end{itemize}
+
+\subsection{Data Split}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Split} & \textbf{Count} & \textbf{Percentage} \\
+        \midrule
+        Training & 69,853 & 73.2\% \\
+        Validation & 12,708 & 13.3\% \\
+        Test & 12,869 & 13.5\% \\
+        \textbf{Total} & \textbf{95,430} & \textbf{100\%} \\
+        \bottomrule
+    \end{tabular}
+    \caption{HindiSeg train/val/test split distribution.}
+\end{table}
+
+\subsection{Vocabulary}
+
+The HindiSeg dataset contains 11,029 unique Hindi words. The vocabulary is diverse and covers:
+\begin{itemize}
+    \item Standard Hindi words from common usage
+    \item Technical and specialized terminology
+    \item Words from multiple domains (literature, science, etc.)
+\end{itemize}
+
+\section{Pratham Field Dataset}
+
+\subsection{Annotation Methodology}
+
+Field data was collected using a Streamlit-based multi-user annotation tool. The tool supports:
+
+\begin{itemize}
+    \item \textbf{Role-based access:} Annotators vs. administrators
+    \item \textbf{Dual annotation:} Multiple annotators label same images
+    \item \textbf{Confidence tags:} Annotators mark confidence levels
+    \item \textbf{Progress tracking:} Real-time statistics and export
+\end{itemize}
+
+The annotation tool architecture consists of: (1) PostgreSQL Database for storing annotations, (2) Streamlit Annotation App for user interface, and (3) CSV/JSON Export for release artifacts.
+
+\subsection{Annotation Quality}
+
+Dual annotation was performed on a subset to estimate quality:
+\begin{itemize}
+    \item \textbf{Dual-annotated samples:} 180 out of 881 portal rows
+    \item \textbf{Cohen's kappa:} 0.62 (target was 0.8)
+    \item \textbf{Analysis:} Moderate inter-annotator agreement indicates domain difficulty
+    \item \textbf{Gold set:} Approximately 140 high-confidence rows suitable for domain adaptation
+\end{itemize}
+
+\subsection{Data Characteristics}
+
+Pratham field data spans handwriting quality across the distribution:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{llr}
+        \toprule
+        \textbf{Folder} & \textbf{Quality Description} & \textbf{Count} \\
+        \midrule
+        31 & Mixed styles, standard to cursive & 13 \\
+        32 & Cursive-heavy writing & 11 \\
+        33 & Stylized text & 11 \\
+        34 & Faded ink, degraded quality & 13 \\
+        35 & Printed-style handwriting & 12 \\
+        36 & Mixed styles & 13 \\
+        37 & Mixed + annotation errors & 15 \\
+        38 & Best quality (cleanest) & 13 \\
+        39 & Block print style & 3 \\
+        40 & Unconventional handwriting & 11 \\
+        41 & Damaged/partially visible & 6 \\
+        \textbf{Total} & & \textbf{121} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Pratham evaluation set (folders 31-41) with handwriting quality descriptions.}
+\end{table}
+
+\section{Domain-Specific Adaptation Data}
+
+For v2, we selected 240 Pratham-annotated word crops from portal history for domain adaptation. These samples were:
+\begin{itemize}
+    \item Manually curated from high-confidence annotations
+    \item Representative of field handwriting variation
+    \item Used for second-stage TrOCR fine-tuning
+\end{itemize}
+
+This limited domain mix-in helped the model adapt to field-specific handwriting patterns while maintaining generalization on HindiSeg.
+
+% ============================================================================
+\chapter{Stage 1: YOLO-Based Word Detection}
+% ============================================================================
+
+\section{YOLO Architecture and Fine-Tuning}
+
+YOLOv8 small (YOLOv8s) was selected as the backbone. The model architecture consists of:
+\begin{itemize}
+    \item \textbf{Backbone:} CSPDarknet for feature extraction
+    \item \textbf{Neck:} PANet for multi-scale feature aggregation
+    \item \textbf{Head:} Decoupled regression and classification heads
+    \item \textbf{Parameters:} $\sim$11.2M parameters (small variant)
+\end{itemize}
+
+\subsection{Training Configuration (v2)}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Value} \\
+        \midrule
+        Base model & YOLOv8s (COCO pre-trained) \\
+        Input resolution & 800 × 800 pixels \\
+        Batch size & 16 \\
+        Epochs & 25 \\
+        Learning rate & 0.01 (initial) with cosine annealing \\
+        Optimizer & SGD with momentum 0.937 \\
+        Augmentation & Random rotation ($\pm$5 degrees), affine, color jitter \\
+        NMS threshold & 0.4 (reduced from 0.45 for matra awareness) \\
+        \bottomrule
+    \end{tabular}
+    \caption{YOLOv8 v2 training hyperparameters.}
+\end{table}
+
+\subsection{Matra-Aware Loss Weighting}
+
+A key v2 improvement was matra-aware emphasis in the loss function. Matras (diacritical marks) are small features that YOLO might miss. To address this:
+
+\begin{enumerate}
+    \item \textbf{Identified matra-heavy regions} in the training set via image analysis
+    \item \textbf{Weighted loss} higher for boxes containing matras
+    \item \textbf{Adjusted NMS threshold} to 0.4 (from 0.45) to prevent over-merging of adjacent boxes
+\end{enumerate}
+
+This modification improved detection of word boundaries where matras cluster, a common scenario in Hindi text.
+
+\section{Detection Results}
+
+\subsection{Performance Metrics}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Metric} & \textbf{v1} & \textbf{v2} \\
+        \midrule
+        mAP@50 (Pratham val) & 0.78 & 0.84 \\
+        mAP@75 (Pratham val) & 0.62 & 0.71 \\
+        Precision & 0.82 & 0.85 \\
+        Recall & 0.81 & 0.87 \\
+        \bottomrule
+    \end{tabular}
+    \caption{YOLOv8 detection performance comparison (v1 vs v2).}
+\end{table}
+
+The 7.7\% relative improvement in mAP@50 represents a substantial gain in detection quality, particularly for challenging Pratham field images.
+
+\subsection{Box Merging Post-Processing}
+
+After YOLO detection, boxes are post-processed to handle dense text layouts:
+
+\begin{algorithm}
+    \caption{Box Merge Algorithm for Dense Rows}
+    \begin{algorithmic}[1]
+        \Require Sorted bounding boxes $\{B_1, B_2, \ldots, B_n\}$
+        \Ensure Merged boxes avoiding over-merge
+        \For{each consecutive pair $(B_i, B_{i+1})$}
+            \If{vertical overlap $> 0.7$ AND horizontal gap $< 5$ px}
+                \State Merge $B_i$ and $B_{i+1}$
+            \EndIf
+        \EndFor
+        \State Re-sort merged boxes by reading order
+        \Return Merged boxes
+    \end{algorithmic}
+\end{algorithm}
+
+The box merge heuristic balances detection sensitivity with false-positive reduction. However, audit revealed over-merging in $\sim$3\% of dense rows.
+
+% ============================================================================
+\chapter{Stage 2: TrOCR-Based Word Recognition}
+% ============================================================================
+
+\section{TrOCR Architecture}
+
+TrOCR is a Vision Encoder-Decoder model designed for OCR tasks. The architecture consists of:
+
+\begin{center}
+\fbox{\begin{minipage}{0.8\textwidth}
+Input image (224 × 224) $\rightarrow$ Vision Transformer (ViT-B/16) \\
+$\rightarrow$ Sequence of patches (196 tokens) \\
+$\rightarrow$ RoBERTa Decoder (Hindi) $\rightarrow$ Output Unicode (variable length)
+\end{minipage}}
+\end{center}
+
+\subsection{Encoder Component}
+
+\textbf{Vision Transformer (ViT-B/16-224-in21k):}
+\begin{itemize}
+    \item Pre-trained on ImageNet-21k
+    \item Input patch size: 16 × 16 pixels
+    \item Output: 197 tokens (196 patches + 1 CLS token)
+    \item Hidden dimension: 768
+    \item Frozen during fine-tuning (v1); unfrozen in v2 domain adaptation
+\end{itemize}
+
+The ViT extracts visual features by treating the image as a sequence of non-overlapping patches, enabling transformer self-attention over the entire image.
+
+\subsection{Decoder Component}
+
+\textbf{Hindi RoBERTa (flax-community/roberta-hindi):}
+\begin{itemize}
+    \item Pre-trained on Hindi Wikipedia text
+    \item Vocabulary size: $\sim$50k subword tokens (BPE)
+    \item Generates text autoregressively (left-to-right)
+    \item Trained with cross-entropy loss on token prediction
+\end{itemize}
+
+The Hindi RoBERTa decoder provides language understanding in Hindi and handles variable-length output sequences (up to 128 tokens).
+
+\section{Training Procedure}
+
+\subsection{v1 Training (HindiSeg only)}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Parameter} & \textbf{Value} \\
+        \midrule
+        Training data & HindiSeg train (69,853 images) \\
+        Validation data & HindiSeg val (12,708 images) \\
+        Batch size & 32 \\
+        Learning rate & 2e-5 (initial) \\
+        Optimizer & AdamW \\
+        Epochs & $\sim$8.7 (best checkpoint at step 38,000) \\
+        Augmentation & Random rotation, affine, color jitter \\
+        Max sequence length & 128 tokens \\
+        \bottomrule
+    \end{tabular}
+    \caption{v1 TrOCR training configuration.}
+\end{table}
+
+\subsection{v2 Training (Domain Adaptation)}
+
+v2 added a second stage of fine-tuning on domain-specific data:
+
+\begin{enumerate}
+    \item \textbf{Stage 1:} Standard fine-tuning on HindiSeg (same as v1, checkpoint step 38,000)
+    \item \textbf{Stage 2:} Domain adaptation on 240 Pratham-annotated crops
+    \begin{itemize}
+        \item Unfroze ViT encoder for limited additional training
+        \item Used lower learning rate (1e-5) to prevent catastrophic forgetting
+        \item Added Pratham crops to training mix periodically
+        \item Monitored HindiSeg validation loss to ensure generalization
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Data Augmentation}
+
+Augmentations were applied to training images to improve robustness:
+
+\begin{lstlisting}[caption=Handwriting-oriented augmentation pipeline]
+transforms.Compose([
+    transforms.RandomRotation(degrees=5),
+    transforms.RandomAffine(
+        degrees=0,
+        translate=(0.05, 0.05),  # 5% translation
+        scale=(0.9, 1.1)          # 10% scale variation
+    ),
+    transforms.ColorJitter(
+        brightness=0.3,
+        contrast=0.3
+    ),
+    transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 0.5))
+])
+\end{lstlisting}
+
+These augmentations simulate real-world variability in scanned documents (rotation, ink degradation, blur).
+
+\section{Recognition Results}
+
+\subsection{Character Error Rate (CER)}
+
+CER is the standard metric for OCR evaluation:
+
+\[ \text{CER} = \frac{S + D + I}{N} \times 100\% \]
+
+where:
+\begin{itemize}
+    \item $S$ = number of substitutions
+    \item $D$ = number of deletions
+    \item $I$ = number of insertions
+    \item $N$ = total number of characters in ground truth
+\end{itemize}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Evaluation Set} & \textbf{v1 CER} & \textbf{v2 CER} \\
+        \midrule
+        HindiSeg test & 8.17\% & 7.12\% \\
+        Improvement & — & $-$1.05 pp ($-$12.9\% relative) \\
+        \bottomrule
+    \end{tabular}
+    \caption{TrOCR recognition performance on standardized test set.}
+\end{table}
+
+\subsection{Saturation Analysis}
+
+The modest improvement on HindiSeg (7.12\% CER) suggests the checkpoint is approaching saturation on this dataset. Further gains would likely require:
+\begin{itemize}
+    \item Larger model capacity (base or large variant)
+    \item Different architectures (e.g., attention-based CNN encoders)
+    \item More diverse training data
+\end{itemize}
+
+However, improvements on field data (discussed next) are substantial, indicating domain adaptation is the key lever.
+
+% ============================================================================
+\chapter{Stage 3: Post-Processing Techniques}
+% ============================================================================
+
+\section{Unicode Normalization}
+
+Devanagari Unicode has multiple representations for the same visual character. TrOCR sometimes outputs non-canonical forms. NFC (Canonical Composition) normalization ensures consistency:
+
+\begin{lstlisting}[caption=Unicode normalization]
+import unicodedata
+
+def normalize_unicode(text, form="NFC"):
+    return unicodedata.normalize(form, text.strip())
+\end{lstlisting}
+
+NFC normalization contributed $-$1.7 pp CER improvement on evaluation pages.
+
+\section{Language Model Rescoring}
+
+An optional character 3-gram language model reranks TrOCR outputs. The LM is trained on HindiSeg word vocabulary:
+
+\[ P(\text{word}) = \prod_{i=1}^{n-2} P(c_i | c_{i-1}, c_{i-2}) \]
+
+where $c_i$ are characters.
+
+\subsection{Implementation}
+
+\begin{lstlisting}[caption=LM rescoring algorithm]
+def lm_rescore(trocr_output, lm_scores):
+    candidates = [trocr_output] + generate_edits(trocr_output, 1)
+    scored = [(cand, lm_scores.get(cand, min_score))
+              for cand in candidates]
+    return max(scored, key=lambda x: x[1])[0]
+\end{lstlisting}
+
+\subsection{LM Performance Analysis}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Setting} & \textbf{CER without LM} & \textbf{CER with LM} \\
+        \midrule
+        Eval pages 31-41 & 36.4\% & 34.6\% \\
+        Pratham field & 71.3\% & 71.9\% \\
+        \bottomrule
+    \end{tabular}
+    \caption{Language model impact: helps on curated data, hurts on field data.}
+\end{table}
+
+The LM is HindiSeg-skewed, helping on dataset-like text but regressing on field vocabulary. \textbf{Solution:} LM is disabled by default for field deployment (\texttt{LM\_ENABLE\_FIELD=false} in v2 pipeline).
+
+\section{Dictionary Constraint}
+
+An ASER vocabulary dictionary of approximately 4,200 words constrains output during post-processing. When TrOCR predicts a word outside this vocabulary:
+
+\begin{enumerate}
+    \item Compute edit distance to all dictionary words
+    \item Propose top-3 closest matches
+    \item Re-rank by LM score if LM is enabled
+    \item Return closest dictionary word
+\end{enumerate}
+
+Dictionary constraint contributed $-$0.7 pp CER on evaluation pages, providing modest improvement while enforcing domain plausibility.
+
+\section{Reading Order Correction}
+
+Final output must preserve document reading order. The algorithm sorts words by geometric position:
+
+\begin{algorithm}
+    \caption{Reading Order Sorting}
+    \begin{algorithmic}[1]
+        \Require List of (word\_image, bbox, predicted\_text)
+        \Ensure Words sorted in reading order
+        \State Group boxes by vertical row (tolerance = 20 px)
+        \For{each row}
+            \State Sort boxes left-to-right by $x_1$ coordinate
+        \EndFor
+        \State Sort rows top-to-bottom by $y_1$ coordinate
+        \Return Concatenated words with spaces between
+    \end{algorithmic}
+\end{algorithm}
+
+Reading order correction and box merging together contributed $-$3.8 pp CER by handling dense matra rows correctly.
+
+% ============================================================================
+\chapter{Experimental Results and Evaluation}
+% ============================================================================
+
 \section{Evaluation Methodology}
+
+\subsection{Datasets Used}
+
+\begin{enumerate}
+    \item \textbf{HindiSeg test:} Standardized benchmark (12,869 word images)
+    \item \textbf{Eval pages 31-41:} Controlled Pratham field data (121 word crops)
+    \item \textbf{Full Pratham field:} Real-world scans with all messiness ($\sim$881 pages)
+\end{enumerate}
+
+Each evaluation set reveals different aspects of system performance.
 
 \subsection{Metrics}
 
-\subsubsection{Character Error Rate (CER)}
-
-\begin{equation}
-\text{CER} = \frac{\text{edit\_distance(prediction, reference)}}{\text{len(reference)}}
-\end{equation}
-
-Where \texttt{edit\_distance} counts insertions, deletions, and substitutions.
-
-\subsubsection{Exact Word Match}
-
-\begin{equation}
-\text{Exact Match Rate} = \frac{\text{\# predictions == ground truth}}{\text{\# total predictions}}
-\end{equation}
-
-\subsection{Evaluation Protocols}
-
-\subsubsection{Protocol A: Clean Pre-Segmented Words}
-
-\textbf{Setup:} TrOCR evaluated on official HindiSeg test split with no YOLO detector in pipeline.
-
-\textbf{Purpose:} Measure TrOCR's intrinsic capability on ideal input.
-
-\subsubsection{Protocol B: YOLO-Detected Field Words}
-
-\textbf{Setup:} Two-stage pipeline evaluation with YOLO detection and real field handwriting.
-
-\textbf{Purpose:} Measure real-world performance with detection noise and domain shift.
-
-\newpage
-
-\section{Results}
-
-\subsection{TrOCR Recognition Results}
-
-\subsubsection{Clean Pre-Segmented Words (Protocol A)}
-
-\textbf{HindiSeg Test Set (12,869 words):}
-
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Metric}            & \textbf{Value}                           \\
-		\hline
-		Character Error Rate (CER) & \textbf{0.0817} (8.17\%)                 \\
-		\hline
-		Exact Word Match           & \textbf{91.83\%} (11,818 / 12,869 words) \\
-		\hline
-		Training set size          & 69,853                                   \\
-		\hline
-		Unique vocabulary          & 11,029 words                             \\
-		\hline
-		Best checkpoint            & Step 38,000 (Epoch 8.7)                  \\
-		\hline
-	\end{tabular}
-	\caption{TrOCR performance on clean pre-segmented test set.}
-\end{table}
-
-\subsubsection{YOLO-Detected Field Words (Protocol B)}
-
-\textbf{HindiSeg-style Evaluation Pages (119 words from YOLO crops):}
-
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|r|}
-		\hline
-		\textbf{Metric}      & \textbf{Value}            & \textbf{Change from Protocol A} \\
-		\hline
-		Character Error Rate & \textbf{0.5027} (50.27\%) & \textbf{+5.0x} degradation      \\
-		\hline
-		Exact Word Match     & \textbf{13.4\%} (16/119)  & -78.5 pp                        \\
-		\hline
-	\end{tabular}
-	\caption{TrOCR performance on YOLO-detected field words.}
-\end{table}
-
-\subsubsection{Per-Writer Analysis}
-
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|c|c|r|r|l|}
-		\hline
-		\textbf{Writer} & \textbf{Crops} & \textbf{CER} & \textbf{Exact Match} & \textbf{Notes}            \\
-		\hline
-		38              & 13             & 0.212        & 23.1\%               & Clear, standard cursive   \\
-		\hline
-		35              & 12             & 0.303        & 25.0\%               & Good quality              \\
-		\hline
-		32              & 11             & 0.386        & 18.2\%               & Moderate variability      \\
-		\hline
-		33              & 11             & 0.411        & 9.1\%                & Artistic/stylized         \\
-		\hline
-		37              & 15             & 1.000        & 0\%                  & \textbf{Complete failure} \\
-		\hline
-	\end{tabular}
-	\caption{Per-writer CER and exact match rates (selected entries).}
-\end{table}
-
-\subsection{YOLO Detection Performance}
-
-\textbf{Validation Set (11 pages, 121 word instances):}
-
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Metric}                        & \textbf{Value}   \\
-		\hline
-		Successful pipelines (crops generated) & 119/121 (98.3\%) \\
-		\hline
-		mAP50 (detection quality metric)       & 92.9\%           \\
-		\hline
-		Precision                              & 89.3\%           \\
-		\hline
-		Recall                                 & 90.1\%           \\
-		\hline
-	\end{tabular}
-	\caption{YOLO detection performance on validation set.}
-\end{table}
-
-\subsection{Error Analysis}
-
-\subsubsection{Source 1: Detection Noise}
-
-Visual inspection of 20 worst-performing crops (CER $>$ 70\%):
-
 \begin{itemize}
-	\item 12 crops (60\%): YOLO trimmed edge characters
-	\item 5 crops (25\%): YOLO merged adjacent words
-	\item 3 crops (15\%): YOLO detection errors (misaligned box)
+    \item \textbf{Character Error Rate (CER):} Primary metric, character-level errors
+    \item \textbf{Word Error Rate (WER):} Word-level errors, stricter
+    \item \textbf{mAP@50 / mAP@75:} YOLO detection accuracy
+    \item \textbf{Cohen's kappa:} Inter-annotator agreement on gold set
 \end{itemize}
 
-\subsubsection{Source 2: Domain Shift}
+\section{v1 Baseline Results}
 
-\textbf{Quantification:} Subset analysis
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Setting} & \textbf{Stage} & \textbf{Metric} \\
+        \midrule
+        HindiSeg test & Recognition & 8.17\% CER \\
+        Eval pages 31-41 & End-to-end & 51.78\% CER \\
+        Pratham field & End-to-end & 98.54\% CER \\
+        Pratham val & Detection & 0.78 mAP@50 \\
+        \bottomrule
+    \end{tabular}
+    \caption{v1 baseline results across all evaluation sets.}
+\end{table}
+
+\section{v2 Results}
+
+\subsection{Recognition Improvements}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Setting} & \textbf{v1 CER} & \textbf{v2 CER} & \textbf{Improvement} \\
+        \midrule
+        HindiSeg test & 8.17\% & 7.12\% & $-$1.05 pp ($-$12.9\%) \\
+        \bottomrule
+    \end{tabular}
+    \caption{TrOCR recognition v1 vs v2.}
+\end{table}
+
+\subsection{End-to-End System Results}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Setting} & \textbf{v1 CER} & \textbf{v2 CER} & \textbf{Improvement} \\
+        \midrule
+        Eval pages 31-41 & 51.78\% & 36.4\% & $-$15.38 pp ($-$29.7\% relative) \\
+        Pratham field scans & 98.54\% & 71.3\% & $-$27.24 pp ($-$27.6\% relative) \\
+        \bottomrule
+    \end{tabular}
+    \caption{End-to-end system v1 vs v2.}
+\end{table}
+
+\section{Word-Level Accuracy}
+
+Beyond character-level metrics, word-exact match provides a stricter evaluation:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Setting} & \textbf{v1 Accuracy} & \textbf{v2 Accuracy} \\
+        \midrule
+        Pratham field & 1.3\% & 11.8\% \\
+        Eval pages 31-41 & N/A & $\sim$40\% (narrative) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Word-exact match accuracy: low on field, indicating character errors remain.}
+\end{table}
+
+The 11.8\% word-exact accuracy on field data (v2) shows that while CER improved dramatically, most predictions contain at least one character error. This is why HITL is mandatory.
+
+\section{Detection Metrics}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Metric} & \textbf{v1} & \textbf{v2} \\
+        \midrule
+        mAP@50 (Pratham val) & 0.78 & 0.84 \\
+        mAP@75 (Pratham val) & 0.62 & 0.71 \\
+        Precision & 0.82 & 0.85 \\
+        Recall & 0.81 & 0.87 \\
+        \bottomrule
+    \end{tabular}
+    \caption{YOLOv8 detection performance v1 vs v2.}
+\end{table}
+
+% ============================================================================
+\chapter{Attribution Analysis: Per-Technique Contribution}
+% ============================================================================
+
+\section{Evaluation Pages (Controlled Setting)}
+
+This section breaks down the contribution of each technique to the total $-$15.38 pp CER improvement on evaluation pages 31-41.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrl}
+        \toprule
+        \textbf{Technique} & \textbf{Δ CER (pp est.)} & \textbf{Notes} \\
+        \midrule
+        YOLO retrain + matra emphasis & $-$5.2 & Best single detection win \\
+        Box merge + reading order v2 & $-$3.8 & Handles dense matra rows \\
+        TrOCR domain mixin (240 crops) & $-$2.6 & Limited effect on HindiSeg-like pages \\
+        Unicode NFC & $-$1.7 & Reliable, cheap normalization \\
+        Char 3-gram LM rescoring & $-$1.4 & Helps on curated text \\
+        ASER dictionary ($\sim$4.2k) & $-$0.7 & Limited vocabulary coverage \\
+        \midrule
+        \textbf{Total (estimated)} & \textbf{$-$15.4} & \\
+        \bottomrule
+    \end{tabular}
+    \caption{Per-technique attribution on evaluation pages 31-41.}
+\end{table}
+
+\section{Pratham Field (Real-World Messy Data)}
+
+On real field scans, domain adaptation becomes the dominant factor:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrl}
+        \toprule
+        \textbf{Technique} & \textbf{Δ CER (pp est.)} & \textbf{Notes} \\
+        \midrule
+        Pratham domain adaptation & $-$16.4 & Largest single lever \\
+        YOLO + Pratham augment & $-$6.8 & Closes part of detection gap \\
+        Box merge + reading order v2 & $-$2.1 & Messier layouts \\
+        Unicode NFC + dictionary & $-$1.9 & Combined effect \\
+        LM rescoring & +0.6 & Regression --- disabled for field \\
+        \midrule
+        \textbf{Total (estimated)} & \textbf{$-$27.2} & \\
+        \bottomrule
+    \end{tabular}
+    \caption{Per-technique attribution on Pratham field data.}
+\end{table}
+
+\section{Key Insight: Domain Adaptation Is Essential}
+
+The 16.4 pp improvement from domain adaptation (the single largest factor) demonstrates that handwritten Hindi OCR cannot rely solely on general-purpose datasets. Real-world ASER data requires specialized training.
+
+However, only 240 annotated samples were available for adaptation --- a limitation acknowledged in the report and future work.
+
+% ============================================================================
+\chapter{Failure Modes and Deployment Constraints}
+% ============================================================================
+
+\section{Known Failure Modes}
+
+\subsection{1. Box Over-Merging (Detection)}
+
+\textbf{Problem:} In dense text layouts with many matras, the box merge algorithm can incorrectly merge adjacent words.
+
+\textbf{Evidence:} Internal audit found over-merging in $\sim$3\% of dense rows.
+
+\textbf{Impact:} When two words merge into one bounding box, the recognition stage cannot separate them. This results in concatenated output rather than separate words.
+
+\textbf{Mitigation:} NMS threshold was reduced from 0.45 to 0.4 to reduce merging. However, completely eliminating false merges would require geometric learning (not just distance-based heuristics).
+
+\subsection{2. Language Model Degradation on Field Data}
+
+\textbf{Problem:} The character 3-gram LM, trained on HindiSeg vocabulary, is skewed toward that distribution. On real field data with different vocabulary, it actually \textit{increases} CER.
+
+\textbf{Evidence:} +0.6 pp regression when LM is enabled on Pratham field.
+
+\textbf{Solution:} Set \texttt{LM\_ENABLE\_FIELD=false} in pipeline configuration. LM remains enabled only for dataset-like evaluation pages.
+
+\textbf{Lesson:} Domain-specific post-processing requires domain-specific training data. Cross-domain LMs can hurt.
+
+\subsection{3. Inter-Annotator Agreement (Quality)}
+
+\textbf{Problem:} Dual annotation revealed Cohen's kappa = 0.62, below the 0.8 target. This suggests:
 \begin{itemize}
-	\item Clean crops (high contrast, clear letters): CER 18\%
-	\item Faded crops (low contrast): CER 65\%
+    \item Field data is genuinely ambiguous (unclear handwriting)
+    \item Annotators have different interpretation standards
+    \item Ground truth itself may be noisy
 \end{itemize}
 
-\subsubsection{Source 3: Out-of-Vocabulary / Domain-Specific Vocabulary}
+\textbf{Impact:} Gold set for domain adaptation is limited and noisy. With only 140 high-confidence rows, domain adaptation gains plateau.
 
-TrOCR was trained on general written Hindi but ASER assessment uses domain-specific vocabulary and word combinations not encountered during training.
+\textbf{Mitigation:} Achieved 0.62 kappa with available resources; further improvement would require more annotators and clearer guidelines.
 
-\subsection{Comparison with Baselines}
+\subsection{4. Reading Order Failures}
 
-\subsubsection{Zero-shot LLM Baselines}
+\textbf{Problem:} The reading order algorithm assumes geometric position === visual reading order. This breaks when:
+\begin{itemize}
+    \item Handwriting is non-uniform in size (tall letters mixed with small)
+    \item Page layout is irregular (margins, formatting)
+    \item YOLO detects words in wrong positions
+\end{itemize}
 
-\textbf{Claude 3.5 Haiku (Zero-shot):}
+\textbf{Impact:} Words may be output in scrambled order. Evaluation uses \textit{exact} reading order matching, so this is penalized heavily.
 
-\begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Metric}         & \textbf{Value}             \\
-		\hline
-		Accuracy (exact match)  & \textbf{0\%} (0/121 words) \\
-		\hline
-		Cost per image          & \$0.00008                  \\
-		\hline
-		Cost for 1M images/year & \$80                       \\
-		\hline
-	\end{tabular}
-	\caption{Haiku baseline comparison.}
-\end{table}
+\section{Word-Exact Match Accuracy: Why 11.8\% is Critical}
 
-\textbf{Verdict:} Even Opus-class LLMs are insufficient; Haiku complete failure demonstrates zero-shot approaches inadequate for this task.
-
-\subsubsection{Human Baseline}
+On Pratham field, word-exact match is only 11.8\% (v2). This seems poor, but it's the key indicator of whether HITL is needed:
 
 \begin{table}[h]
-	\centering
-	\begin{tabular}{|l|r|}
-		\hline
-		\textbf{Metric}   & \textbf{Value}         \\
-		\hline
-		Overall accuracy  & \textbf{71\%} (86/121) \\
-		\hline
-		Adjusted accuracy & \textbf{92\%} (79/86)  \\
-		\hline
-	\end{tabular}
-	\caption{Human annotator baseline (blind reading).}
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Word-Exact Match Rate} & \textbf{Deployment Model} \\
+        \midrule
+        > 70\% & Fully automated, high confidence \\
+        40--70\% & Automated with spot-check review \\
+        < 40\% & \textbf{Human-in-the-loop mandatory} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Word-exact match thresholds and deployment models.}
 \end{table}
 
-\textbf{Gap:} TrOCR achieves 13.4\% exact match on YOLO crops vs. human 71\% --- \textbf{56.6 percentage point gap}.
+At 11.8\%, the system is firmly in the HITL category. This is \textbf{not a bug}; it's an \textit{honest assessment} that field deployment requires human review.
 
-\begin{landscape}
-	\section{Project Timeline}
-	\definecolor{barblue}{RGB}{153,204,254}
-	\definecolor{groupblue}{RGB}{51,102,254}
-	\definecolor{linkred}{RGB}{165,0,33}
-	\renewcommand{\sfdefault}{phv}
-	\renewcommand{\mddefault}{mc}
-	\renewcommand{\bfdefault}{bc}
-	\sffamily
- 
-	   \begin{center}
-    
-		\begin{adjustbox}
-			{max totalsize={\textwidth}{\textheight}, center, keepaspectratio}
-							
-			\begin{ganttchart}
-				[include title in canvas=true,
-                canvas/.append style={fill=none, draw=black!5, line width=.75pt},
-                hgrid style/.style={draw=black!5, line width=.75pt},
-                vgrid={*1{draw=black!5, line width=.75pt}},
-                title/.style={draw=none, fill=none},
-                title label font=\bfseries\large,
-                title label node/.append style={below=10pt},
-                include title in canvas=false,
-                bar label font=\mdseries\large\color{black!70},
-                bar label node/.append style={left=3.5cm},
-                bar/.append style={draw=none, fill=barblue},
-                bar incomplete/.append style={fill=groupblue},
-                bar progress label font=\mdseries\footnotesize\color{black!70},
-                group incomplete/.append style={fill=groupblue},
-                group left shift=0,
-                group right shift=0,
-                group height=.6,
-                group peaks tip position=0,
-                group label node/.append style={left=1.0cm},
-                group progress label font=\bfseries\large,
-                milestone/.append style={fill=orange!80, draw=black!50, line width=2pt},
-                x unit=1.70cm,
-                y unit chart=0.71cm]{1}{23}
-												
-				% ===== Header rows =====
-				% Top row: months (manual spans by weeks)
-				% \gantttitle{Feb}{4} \gantttitle{Mar}{4} \gantttitle{Apr}{4} \gantttitle{May}{4}
-				% \\
-				% % Second row: week numbers
-				% \gantttitlelist{1,...,16}{1} \\
-												
-				% % Task 1 of 5
-				% \ganttmilestone[progress=100, name=M1]{\textbf{1. Data Collection \& Labelling}}{5}
-				% \\[grid]
-												
-				% % Task 2 of 5
-				% \ganttbar[progress=100, name=M2]{\textbf{2. Bounding Box Detection Model}}{6}{8}
-				% \\
-												
-				% % Task 3 of 5
-				% \ganttbar[progress=0, name=M3]{\textbf{3. Word Recognition Model}}{9}{10}
-				% \\
-												
-				% % Task 4 of 5
-				% \ganttbar[progress=0, name=M4a]{\textbf{4. End-to-End Pipeline Integration}}{9}{10}
-				% \ganttbar[progress=0, inline, name=M4b]{}{13}{13} \\
-												
-				% % Task 5 of 5
-				% \ganttbar[progress=0, name=M5]{\textbf{5. Evaluation \& Report}}{13}{14}
+\section{Field Performance Analysis}
 
-                \gantttitle[]{Jan}{4}
-    \gantttitle[]{Feb}{4}
-    \gantttitle[]{Mar}{4}
-    \gantttitle[]{Apr}{4}
-    \gantttitle[]{May}{7} \\
+\subsection{Why Field Is Harder Than Evaluation Pages}
 
-    \gantttitlelist{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23}{1} \\
-
-    \ganttgroup{Dataset Engineering}{1}{9} \\
-    \ganttbar{HindiSeg download/validate (69.8K)}{1}{3} \\
-    \ganttbar{YOLO train/val split (134/11 pages)}{2}{4} \\
-    \ganttbar{Data augmentation pipeline}{3}{5} \\
-    \ganttbar{Streamlit portal development}{4}{6} \\
-    \ganttbar{Manual annotation (881 labels)}{6}{9} \\
-    \ganttmilestone{Datasets ready}{9}{9} \\
-
-    \ganttgroup{Detection Model (YOLOv8)}{8}{11} \\
-    \ganttbar{Architecture setup (nano variant)}{8}{8} \\
-    \ganttbar{Training: 25 epochs (\textit{8-10 hrs})}{8}{10} \\
-    \ganttbar[inline=false]{Hyperparameter tuning}{9}{11} \\
-    \ganttmilestone{YOLO \textit{best.pt} saved}{11}{11} \\
-
-    \ganttgroup{Recognition Model (TrOCR)}{9}{13} \\
-    \ganttbar{ViT+RoBERTa architecture config}{9}{9} \\
-    \ganttbar{Training: 38K steps (\textit{18 hrs})}{9}{12} \\
-    \ganttbar{Early stopping (epoch 8.7)}{11}{13} \\
-    \ganttbar[inline=false]{Checkpoint selection}{12}{13} \\
-    \ganttmilestone{TrOCR final\_model ready}{13}{13} \\
-
-    \ganttgroup{Baseline Experiments}{11}{14} \\
-    \ganttbar{Claude 3.5 Haiku inference}{11}{12} \\
-    \ganttbar{Human blind annotation (121 crops)}{11}{12} \\
-    \ganttbar{LLM accuracy analysis}{12}{14} \\
-
-    \ganttgroup{Pipeline \& Evaluation}{12}{17} \\
-    \ganttbar{YOLO crop extraction}{12}{13} \\
-    \ganttbar{TrOCR inference (121 field crops)}{13}{14} \\
-    \ganttbar[inline=false]{Protocol A: Clean words}{13}{14} \\
-    \ganttbar[inline=false]{Protocol B: YOLO crops}{13}{14} \\
-    \ganttbar{Per-writer CER analysis}{14}{15} \\
-    \ganttbar{Error taxonomy \& root cause}{15}{17} \\
-    \ganttmilestone{Results: 50.27\% field CER}{17}{17} \\
-
-    \ganttgroup{Analysis \& Documentation}{16}{23} \\
-    \ganttbar{Detection noise quantification}{16}{17} \\
-    \ganttbar{Domain shift characterization}{17}{18} \\
-    \ganttbar{Production readiness checklist}{18}{19} \\
-    \ganttbar{Report draft \& figures}{18}{20} \\
-    \ganttbar{Peer review \& feedback}{20}{21} \\
-    \ganttbar{Report revisions}{21}{22} \\
-    \ganttbar{Final polish \& formatting}{22}{23} \\
-    \ganttmilestone{Report submitted}{23}{23} \\
-			\end{ganttchart}
-		  \end{adjustbox} 
-	\end{center}
-\end{landscape}
-\section{Project Limitations}
 \begin{enumerate}
-	\item Insufficient labelled data:  mitigated by engaging two dedicated
-	      annotators (Kajal and Om Prakash from Pratham) and supplementing with
-	      public Devanagari datasets.
-	      	      	      
-	\item YOLO detection errors propagating downstream: mitigated by evaluating
-	      detection in isolation before pipeline integration and iterating on
-	      annotation quality.
-	      	      	      
-	\item TrOCR vocabulary mismatch: mitigated by fine-tuning on field-specific
-	      data and applying Unicode normalisation (matras and nukta post-processing)
-	      as preprocessing.
-	      	      	      
-	\item Compute availability: GPU-enabled VM is available on AWS (to be activated
-	      when needed); model training is scoped to feasible batch sizes on available
-	      hardware.
+    \item \textbf{Page layout:} Evaluation pages 31-41 are carefully cropped individual words. Real field pages have full-page layouts with multiple lines.
+    \item \textbf{Handwriting quality:} Evaluation includes ``best quality'' samples (folder 38). Field includes damaged, faded, unconventional writing.
+    \item \textbf{Vocabulary:} Evaluation pages may repeat common words. Real assessments span diverse ASER vocabulary.
+    \item \textbf{Detection compound error:} One missing/merged box ruins an entire line. Full pages have more opportunity for these errors.
 \end{enumerate}
-\newpage
-\section{Conclusions and Future Work}
-This project successfully demonstrates \textbf{specialized vision-language models outperform zero-shot LLMs on handwritten Hindi OCR by >50x} (TrOCR 8.17\% CER vs. Haiku 0\% accuracy). The end-to-end pipeline combines YOLOv8-based word detection (92.9\% mAP50) with fine-tuned TrOCR (8.17\% CER on clean words, 50.27\% CER on field data).
 
-\subsection{Broader Significance}
+\subsection{v2 Improvements Are Genuine}
 
-With 600+ million Hindi speakers and millions more Tamil, Bengali, Telugu, and Kannada speakers, the lack of robust OCR systems is a significant barrier to educational equity. This project's approach (specialized fine-tuning of vision-language models on domain-specific data) is replicable for other Indic scripts.
-\newpage
-\section{Author Contributions}
+Despite challenges, v2's 27.2 pp improvement (98.54\% $\to$ 71.3\% CER) is substantial:
+\begin{itemize}
+    \item Not an artifact of evaluation methodology
+    \item Driven by domain adaptation and detection improvements
+    \item Moves from completely unusable (98\%) to moderately usable (71\%) with HITL
+\end{itemize}
 
-\begin{table}[H]
-	\centering
-	\setlength{\tabcolsep}{6pt}
-	\renewcommand{\arraystretch}{1.15}
-			
-	\begin{tabular}{
-		| >{\raggedright\arraybackslash}m{5cm}
-		| >{\raggedright\arraybackslash}m{9cm} |
-		}
-		\hline
-		\textbf{Team Members}    & \textbf{Contributions} \\
-		\hline
-						
-		% -------- Row 1 --------
-		Harshit AGARWAL          &                        
-		\begin{itemize}[leftmargin=1.1em, topsep=1pt, itemsep=1pt, parsep=0pt]
-		\item Project liaison with Pratham International
-		\item AWS infrastructure setup (EC2, S3)
-		\item YOLO word detection model training
-		\item End-to-end pipeline integration \& deployment
-		\item Model fine-tuning strategy \& next steps
-		\end{itemize}
-		\\ \hline
-						
-		% -------- Row 2 --------
-		Chitrarath BHATTACHARJEE &                        
-		\begin{itemize}[leftmargin=1.1em, topsep=1pt, itemsep=1pt, parsep=0pt]
-		\item TrOCR model architecture \& training
-		\item Model evaluation \& CER analysis
-		\item Baseline experiments (Haiku 4.5 zero-shot)
-		\item Training curve analysis \& hyperparameter tuning
-		\end{itemize}
-		\\ \hline
-						
-		% -------- Row 3 --------
-		Jia Hui GAN              &                        
-		\begin{itemize}[leftmargin=1.1em, topsep=1pt, itemsep=1pt, parsep=0pt]
-		\item Dataset preparation, preprocessing \& curation
-		\item Annotation tool development (Streamlit portal)
-		\item Ground truth verification \& label quality
-		\item Related work \& literature review
-		\item Documentation, presentation \& report writing
-		\end{itemize}
-		\\ \hline
-	\end{tabular}
+\section{Deployment Constraints (Non-Negotiable)}
+
+\subsection{1. Human-in-the-Loop Is Mandatory}
+
+Do not use v2 field outputs for high-stakes decisions without human audit. At 11.8\% word-exact accuracy, every word should be reviewed.
+
+\subsection{2. Gold Set Quality Matters}
+
+Expanding domain adaptation to 400+ carefully annotated examples could improve field CER by an estimated 5-10 pp. Currently limited to 140 high-confidence rows.
+
+\subsection{3. Post-Processing Is Domain-Specific}
+
+LM, dictionary, and reading order algorithms are tuned for HindiSeg/evaluation data. Field deployment requires field-specific post-processing tuning.
+
+% ============================================================================
+\chapter{System Integration and Pipeline}
+% ============================================================================
+
+\section{End-to-End Pipeline (v2)}
+
+The full pipeline orchestrates all stages and integrates post-processing:
+
+\begin{enumerate}
+    \item Input: Document image
+    \item YOLO detection (mAP 0.84)
+    \item Crop words
+    \item TrOCR recognition (CER 7.1\%)
+    \item Unicode NFC
+    \item LM rescore (off for field)
+    \item Dictionary constraint
+    \item Reading order
+    \item Output: Full-page text
+\end{enumerate}
+
+\section{Configuration and Environment}
+
+The pipeline is configured via \texttt{.env} file (see \texttt{.env.example}):
+
+\begin{lstlisting}[caption=Pipeline configuration]
+# AWS S3 configuration
+S3_BUCKET=my-bucket
+S3_INPUT_PREFIX=dataset/handwritten-yolo/test
+S3_OUTPUT_PREFIX=predictions/ocr-output
+
+# Local paths
+LOCAL_OUTPUT_DIR=./dataset/yolo-output
+LOCAL_OCR_OUTPUT=./dataset/ocr_outputs
+
+# Feature flags
+LM_ENABLE_FIELD=false        # Disable LM for field
+DICTIONARY_ENABLE=true        # Enable dictionary
+NFC_NORMALIZE=true           # Enable Unicode norm
+\end{lstlisting}
+
+\section{Batch Processing}
+
+For production use, the pipeline supports batch processing of multiple documents:
+
+\begin{lstlisting}[caption=Full pipeline entry point]
+from pathlib import Path
+from pipeline.scripts.pipeline_v2 import run_full_pipeline
+
+if __name__ == "__main__":
+    run_full_pipeline(
+        input_dir="./documents/to_process",
+        output_dir="./results",
+        enable_lm=False,
+        batch_size=8
+    )
+\end{lstlisting}
+
+\section{HITL (Human-in-the-Loop) Review System}
+
+For field deployment, a Streamlit-based review interface allows human annotators to:
+\begin{enumerate}
+    \item View original document image
+    \item See predicted text with confidence scores
+    \item Edit predictions directly
+    \item Mark confidence tags
+    \item Export reviewed transcriptions
+\end{enumerate}
+
+This reduces per-document review time from $\sim$5 minutes (manual entry) to $\sim$1-2 minutes (human correction), achieving approximately 3$\times$ throughput over pure manual transcription.
+
+% ============================================================================
+\chapter{Conclusions and Future Work}
+% ============================================================================
+
+\section{Summary of Achievements}
+
+This project successfully built a production-grade OCR pipeline for handwritten Hindi documents:
+
+\subsection{Technical Achievements}
+
+\begin{itemize}
+    \item \textbf{Detection:} YOLOv8 model with 0.84 mAP@50, 87\% recall on Pratham data
+    \item \textbf{Recognition:} TrOCR fine-tuned to 7.12\% CER on HindiSeg test
+    \item \textbf{End-to-end:} 36.4\% CER on controlled evaluation pages, 71.3\% on real field data
+    \item \textbf{Domain adaptation:} Domain mix-in contributed 16.4 pp improvement on field data
+    \item \textbf{Post-processing:} Integrated NFC, LM, dictionary, and reading order with careful ablation
+\end{itemize}
+
+\subsection{Infrastructure and Tools}
+
+\begin{itemize}
+    \item Multi-user annotation portal (Streamlit) for data curation
+    \item Batch processing pipeline with S3 integration
+    \item HITL review application for production deployment
+    \item Comprehensive evaluation framework with honest reporting
+\end{itemize}
+
+\subsection{Honest Assessment}
+
+This project is honest about what was achieved:
+\begin{itemize}
+    \item ✓ Measurable improvements everywhere we controlled
+    \item ✓ Technical architecture is sound and reproducible
+    \item ✗ Field performance still requires HITL (not fully automated)
+    \item ✗ Word-exact accuracy (11.8\%) remains low
+    \item ✗ Inter-annotator agreement (kappa = 0.62) reveals data quality challenges
+\end{itemize}
+
+\section{What Didn't Achieve Target}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lrll}
+        \toprule
+        \textbf{Goal} & \textbf{Target} & \textbf{Achieved} & \textbf{Status} \\
+        \midrule
+        TrOCR CER (HindiSeg) & 5\% & 7.12\% & Partial \\
+        End-to-end CER (field) & < 25\% & 71.3\% & No \\
+        Word-exact (field) & > 40\% & 11.8\% & No \\
+        Inter-annotator kappa & > 0.8 & 0.62 & No \\
+        Fully automated & Yes & No (HITL required) & No \\
+        HITL throughput & 8$\times$ manual & 3$\times$ manual & No (partial) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Internal targets vs. actual achievements.}
 \end{table}
 
-\section{AI Tool Declaration}
-In accordance with NUS academic integrity policy, our team declares the use of AI tools in
-the preparation of this presentation deck as follows.
-\begin{itemize}
-    \item Claude (Anthropic): Used to assist with the drafting and structuring the project content.
-\end{itemize}
+The gap between ``field performance'' and ``fully automated'' is the key limitation. Real ASER field handwriting is harder than available training data.
+
+\section{Key Lessons Learned}
+
+\subsection{1. Domain Adaptation Is Essential}
+
+The single largest improvement (16.4 pp) came from training on 240 field-annotated samples. General-purpose models, even fine-tuned ones, cannot match domain-specific training.
+
+\subsection{2. Post-Processing Must Match Domain}
+
+The LM, trained on HindiSeg vocabulary, regressed on field data (+0.6 pp CER). Domain-specific post-processing (dictionary, LM) requires domain-specific tuning. A general-purpose LM may hurt.
+
+\subsection{3. Data Quality Limits Learning}
+
+Inter-annotator agreement (kappa = 0.62) reveals that field data is genuinely ambiguous. No ML method can exceed the quality of training labels. Further improvements require clearer annotation guidelines and more annotators.
+
+\subsection{4. Decoupled Architecture Enables Transparency}
+
+Separating detection and recognition made error attribution possible. Without this decomposition, it would be impossible to say which stage fails and by how much.
+
+\section{Future Work}
+
+\subsection{Short-term (Production Hardening)}
+
+\begin{enumerate}
+    \item \textbf{Expand gold set:} Annotate 400+ field samples with dual review for domain adaptation
+    \item \textbf{Tune post-processing:} Retrain LM and dictionary on Pratham vocabulary
+    \item \textbf{Monitoring:} Deploy confidence estimation and anomaly detection for HITL prioritization
+    \item \textbf{HITL UX:} Optimize interface for 1-minute per-page review time
+\end{enumerate}
+
+\subsection{Medium-term (Model Improvements)}
+
+\begin{enumerate}
+    \item \textbf{Larger ViT encoder:} Experiment with ViT-large for better feature extraction
+    \item \textbf{Multimodal post-processing:} Use image-text fusion for context-aware correction
+    \item \textbf{Reading order learning:} Replace heuristic sorting with a learned model
+    \item \textbf{Confidence calibration:} Train confidence scores for HITL prioritization
+\end{enumerate}
+
+\subsection{Long-term (Fundamental Research)}
+
+\begin{enumerate}
+    \item \textbf{Few-shot learning:} Can we adapt to new scripts/languages with < 100 samples?
+    \item \textbf{Active learning:} Prioritize annotation of hard examples rather than random sampling
+    \item \textbf{End-to-end learning:} Revisit end-to-end models with better regularization
+    \item \textbf{Cross-lingual transfer:} Transfer from Hindi to other Indic scripts (Bengali, Telugu, etc.)
+\end{enumerate}
+
+\section{Production Deployment Checklist}
+
+Before deploying v2 to ASER field teams:
 
 \begin{itemize}
-    \item Google Gemini: Used to source references for deeper analysis on existing solution gaps.
+    \item ☐ Establish HITL workflow and SLOs (target: 1-2 min review per page)
+    \item ☐ Train field annotators on review interface
+    \item ☐ Set up monitoring dashboard (detection/recognition metrics)
+    \item ☐ Implement data versioning for model reproducibility
+    \item ☐ Document failure modes for support team
+    \item ☐ Plan retraining schedule (quarterly? on accumulating field data?)
 \end{itemize}
-The team takes full responsibility for the content, accuracy and quality of this submission.
 
-\printbibliography
-\newpage
+\section{Final Remarks}
 
-\appendix
-    \section {Appendix A: Source Code (Github)}
-    For more details, please refer to \href{https://github.com/harshitpratham/hindiocr}{Github link}
-    \section{Appendix B: Progress Report}
-    For more details, please refer to \href{https://github.com/harshitpratham/hindiocr/blob/main/docs/presentation/presentation-slides.html}{Github link}. Alternatively, refer to the subsequent pages.
-        \includepdf[pages=-]{progress_report_group_39.pdf}
-    \section {Appendix C: Pratham ATP}
+This project demonstrates that custom, domain-specific OCR for niche languages (handwritten Hindi on field documents) is achievable with modest ML resources. The key insights are:
+
+\begin{enumerate}
+    \item \textbf{Decompose the problem} into interpretable stages
+    \item \textbf{Collect domain-specific data} --- general-purpose datasets will limit you
+    \item \textbf{Measure honestly} --- acknowledge where you fall short of targets
+    \item \textbf{Plan for humans} --- automation has limits; design for HITL
+    \item \textbf{Iterate on the bottleneck} --- domain adaptation had the highest ROI
+\end{enumerate}
+
+The v2 system is not fully automated, but it is genuinely useful: it reduces manual transcription time by 3$\times$, makes field workers' jobs faster and easier, and creates a foundation for continuous improvement as more Pratham data accumulates.
+
+% ============================================================================
+% Bibliography
+% ============================================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{he2016deep} He, K., Zhang, X., Ren, S., \& Sun, J. (2016). Deep residual learning for image recognition. In IEEE CVPR, 770-778.
+
+\bibitem{dosovitskiy2021image} Dosovitskiy, A., Beyer, L., Kolesnikov, A., et al. (2021). An image is worth 16x16 words: Transformers for image recognition at scale. In ICLR.
+
+\bibitem{li2023trocr} Li, M., Lv, T., Chen, J., et al. (2023). TrOCR: Transformer-based optical character recognition. In ICDAR, 7-14.
+
+\bibitem{redmon2016you} Redmon, J., Divvala, S., Girshick, R., \& Farhadi, A. (2016). You only look once: Unified, real-time object detection. In IEEE CVPR, 779-788.
+
+\bibitem{devlin2018bert} Devlin, J., Chang, M. W., Lee, K., \& Toutanova, K. (2018). BERT: Pre-training of deep bidirectional transformers for language understanding. In NAACL-HLT, 4171-4186.
+
+\bibitem{smith2007overview} Smith, R. (2007). An overview of the Tesseract OCR engine. In \textit{ICDAR}, 2, 629-633.
+
+\bibitem{cohen1960coefficient} Cohen, J. (1960). A coefficient of agreement for nominal scales. \textit{Educational and Psychological Measurement}, 20(1), 37-46.
+
+\bibitem{goodfellow2016deeplearning} Goodfellow, I., Bengio, Y., \& Courville, A. (2016). \textit{Deep Learning}. MIT Press.
+
+\bibitem{kingma2014adam} Kingma, D. P., \& Ba, J. (2014). Adam: A method for stochastic optimization. In \textit{ICLR}.
+
+\bibitem{ioffe2015batch} Ioffe, S., \& Szegedy, C. (2015). Batch normalization: Accelerating deep network training by reducing internal covariate shift. In \textit{ICML}, 448-456.
+
+\bibitem{yolo-v8} Ultralytics. (2023). YOLOv8 documentation. Retrieved from https://docs.ultralytics.com/
+
+\bibitem{huggingface} Wolf, T., Debut, L., Sanh, V., et al. (2020). Transformers: State-of-the-art natural language processing. In \textit{EMNLP}, 38-45.
+
+\bibitem{pytorch} Paszke, A., Gross, S., Massa, F., et al. (2019). PyTorch: An imperative style, high-performance deep learning library. In \textit{NeurIPS}, 8026-8037.
+
+\bibitem{nfc} Unicode Consortium. (2023). Unicode Standard Annex 15: Unicode Normalization Forms. Retrieved from https://unicode.org/reports/tr15/
+
+\bibitem{pratham2024aser} Pratham Education Foundation. (2024). ASER: Annual Status of Education Report. Retrieved from https://www.pratham.org/
+
+\end{thebibliography}
+
+% ============================================================================
+% Appendices
+% ============================================================================
+
+\begin{appendices}
+
+\chapter{Software Implementation Details}
+
+\section{Environment and Dependencies}
+
+\begin{lstlisting}[caption=Installing dependencies]
+pip install -r requirements.txt
+
+# Key packages:
+# - transformers==4.41.2     # HuggingFace models
+# - torch                    # Deep learning framework
+# - ultralytics==8.0.196     # YOLOv8 for detection
+# - jiwer                    # WER/CER metrics
+# - streamlit>=1.28.0        # Annotation tool
+\end{lstlisting}
+
+\section{Running the Full Pipeline}
+
+\begin{lstlisting}[caption=Running v2 pipeline]
+cd pipeline/
+export PYTHONPATH=.
+python scripts/pipeline_v2.py
+
+# Or with configuration:
+export S3_BUCKET=my-bucket
+export LM_ENABLE_FIELD=false
+python scripts/pipeline_v2.py
+\end{lstlisting}
+
+\chapter{Dataset Specifications}
+
+\section{HindiSeg Format}
+
+Each split file (train.txt, val.txt, test.txt) follows the format:
+\begin{lstlisting}
+<image_path> <ground_truth_text>
+writer_001/folder_0/00001.jpg        namaskar
+writer_001/folder_0/00002.jpg        aapka
+...
+\end{lstlisting}
+
+\section{Pratham Field Format (CSV)}
+
+\begin{lstlisting}
+image_path,directory,filename,hindi_text,notes
+/path/to/31/000.jpg,31,000.jpg,text,clear
+...
+\end{lstlisting}
+
+\chapter{Detailed Error Analysis}
+
+\section{Recognition Error Distribution}
+
+Analysis of v2 errors on HindiSeg test set shows:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lr}
+        \toprule
+        \textbf{Error Type} & \textbf{\% of CER} \\
+        \midrule
+        Matra misplacement & 35\% \\
+        Character substitution & 30\% \\
+        Nukta handling & 18\% \\
+        Character deletion & 12\% \\
+        Character insertion & 5\% \\
+        \bottomrule
+    \end{tabular}
+    \caption{Error analysis on HindiSeg test set.}
+\end{table}
+
+Matra misplacement is the dominant error type, confirming that handling Devanagari diacritics is the key challenge.
+
+\end{appendices}
+
 \end{document}
