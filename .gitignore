@@ -56,7 +56,16 @@ drive-download-*.zip
 data/
 docs/
 
-# Virtual environments anywhere in tree (legacy, now covered above)
+# Markdown files (except README.md) — not for public repo
+GUIDE.md
+*.md
+!README.md
+
+# Example env and playbooks
+.env.example
+pipeline/playbooks/
+
+# Virtual environments anywhere in tree
 
 
 # macOS
