@@ -1,0 +1,72 @@
+ISY5004 GC — Intelligent Sensing Systems
+NUS Institute of Systems Science | Jan–May 2026
+Group 39 — Final Project Code Submission
+
+================================================================================
+REPOSITORY
+================================================================================
+
+GitHub: https://github.com/harshitpratham/ocrprojectsem3
+Branch: main
+Author: Harshit Pratham (harshitpratham@gmail.com)
+
+================================================================================
+TEAM
+================================================================================
+
+  Harshit Agarwal       E1509813   harshitpratham@gmail.com
+  Chitrarath Bhattacharjee  E1511452
+  Gan Jia Hui           E1092587
+
+================================================================================
+WHAT THIS REPOSITORY CONTAINS
+================================================================================
+
+This repository contains the complete source code for the Hindi Handwritten
+Document Recognition pipeline developed as the Group 39 final project for
+ISY5004 Intelligent Sensing Systems.
+
+Code is organised into four modules:
+
+  annotation/     Multi-user Streamlit annotation portal
+  detection/      YOLOv8 word detection scripts and training configs
+  recognition/    TrOCR training, evaluation, and post-processing pipeline
+  pipeline/       End-to-end batch pipeline, HITL review, monitoring
+
+================================================================================
+WHAT IS NOT INCLUDED — NDA WITH PROJECT SPONSOR
+================================================================================
+
+This submission does NOT include model weights, training data, evaluation
+artefacts, or project documentation (reports, presentations, analysis).
+
+This project was conducted in partnership with Pratham Education Foundation
+under a non-disclosure agreement (NDA). The following materials are withheld
+in compliance with that agreement and cannot be publicly released:
+
+  - Trained model weights (TrOCR ~914 MB, YOLO ~22 MB)
+  - Pratham ASER field survey handwriting data and images
+  - Annotated word crop dataset (121 evaluation crops + 240 domain-adapt set)
+  - Annotation portal export history
+  - Evaluation result artefacts (CSVs, JSONs)
+  - Project reports, presentation slides, and analysis documents
+
+NUS assessors and project supervisors requiring access to the above materials
+should contact the team directly.
+
+================================================================================
+PROJECT SUMMARY
+================================================================================
+
+End-to-end OCR pipeline: scanned handwritten Hindi document -> Unicode text.
+
+  Stage 1: YOLOv8s word detection (mAP@50: 0.78 -> 0.84 in v2)
+  Stage 2: TrOCR word recognition — ViT encoder + RoBERTa-Hindi decoder
+           (HindiSeg test CER: 8.17% -> 7.12% in v2)
+  Stage 3: Text post-processing — Unicode NFC, LM rescoring, dictionary
+
+End-to-end pipeline CER on Pratham evaluation pages: 51.8% -> 36.4% (v1->v2).
+Field performance requires human-in-the-loop review; not production-ready for
+unattended deployment.
+
+================================================================================
