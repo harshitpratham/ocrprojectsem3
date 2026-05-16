@@ -56,6 +56,9 @@ drive-download-*.zip
 data/
 docs/
 
+# Models folder
+models/
+
 # Markdown files (except README.md) — not for public repo
 GUIDE.md
 *.md
